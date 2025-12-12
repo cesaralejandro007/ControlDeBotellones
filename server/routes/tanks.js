@@ -1,0 +1,109 @@
+const express = require('express')
+const router = express.Router()
+const Product = require('../models/Product')
+const InventoryMovement = require('../models/InventoryMovement')
+const auth = require('../middleware/auth')
+const isAdmin = require('../middleware/isAdmin')
+const Tank = require('../models/Tank')
+const Payment = require('../models/Payment')
+
+// GET /api/inventory/tanks/summary?days=30
+// Devuelve lista de tanques con estado actual y pequeño historial diario (últimos N días)
+// list all tanks with current data and simple daily history
+router.get('/summary', auth, async (req, res) => {
+  try{
+    const days = Math.max(7, parseInt(req.query.days) || 30)
+    // join Tank documents to get pricePerFill, litersPerBottle
+    const tanks = await Tank.find().populate('product')
+    const since = new Date(); since.setDate(since.getDate() - days)
+
+    const results = await Promise.all(tanks.map(async t => {
+      const product = t.product
+      // movimientos del tanque en periodo
+      const moves = await InventoryMovement.find({ product: product._id, createdAt: { $gte: since } }).sort({ createdAt: 1 })
+      // construir historial simple: tomar el quantity actual y aplicar movimientos hacia atrás para generar puntos diarios
+      // iniciamos con current quantity
+      let current = product.quantity || 0
+      const dayMs = 24*60*60*1000
+      const history = []
+      for (let d = days-1; d >= 0; d--) {
+        const dayStart = new Date(); dayStart.setHours(0,0,0,0); dayStart.setDate(dayStart.getDate() - d)
+        const dayEnd = new Date(dayStart.getTime() + dayMs)
+        // sum movements within day
+        const dayMoves = moves.filter(m => m.createdAt >= dayStart && m.createdAt < dayEnd)
+        // apply reverse to get quantity at end of previous day
+        const delta = dayMoves.reduce((s, m) => s + (m.type === 'in' ? m.quantity : -m.quantity), 0)
+        // quantity at start of day = current - sum of moves from this day onward
+        const qtyAtDayStart = current - delta
+        history.push({ date: dayStart.toISOString().slice(0,10), qty: qtyAtDayStart })
+        // set current for previous iteration
+        current = qtyAtDayStart
+      }
+
+      const pct = product.capacity ? Math.min(100, Math.round((product.quantity / product.capacity) * 100)) : 0
+      const status = pct >= 70 ? 'ok' : (pct >= 30 ? 'medium' : 'low')
+      const fillable = Math.floor(product.quantity / (t.litersPerBottle || 20))
+      return { id: t._id, name: product.name, productId: product._id, quantity: product.quantity, capacity: product.capacity, pct, status, history, pricePerFill: t.pricePerFill, litersPerBottle: t.litersPerBottle, fillable }
+    }))
+
+    res.json(results)
+  }catch(err){ res.status(500).json({ error: err.message }) }
+})
+
+// Create a new Tank (and underlying product) - admin only
+router.post('/', auth, isAdmin, async (req, res) => {
+  try{
+    const { name, capacity, pricePerFill, litersPerBottle = 20 } = req.body
+    // create product with unit 'litro' and category 'Llenado Tanque'
+    const product = await Product.create({ name, category: 'Llenado Tanque', unit: 'litro', quantity: 0, capacity, price: pricePerFill || 0 })
+    const tank = await Tank.create({ product: product._id, litersPerBottle, pricePerFill: pricePerFill || 0 })
+    res.json({ tank, product })
+  }catch(err){ res.status(400).json({ error: err.message }) }
+})
+
+// Update tank (price / litersPerBottle) - admin
+router.put('/:tankId', auth, isAdmin, async (req, res) => {
+  try{
+    const t = await Tank.findById(req.params.tankId).populate('product')
+    if (!t) return res.status(404).json({ error: 'Tanque no encontrado' })
+    const { pricePerFill, litersPerBottle, name, capacity } = req.body
+    if (typeof pricePerFill === 'number') t.pricePerFill = pricePerFill
+    if (typeof litersPerBottle === 'number') t.litersPerBottle = litersPerBottle
+    if (typeof name === 'string') t.product.name = name
+    if (typeof capacity === 'number') t.product.capacity = capacity
+    if (name || capacity) await t.product.save()
+    await t.save()
+    res.json({ tank: t, product: t.product })
+  }catch(err){ res.status(400).json({ error: err.message }) }
+})
+
+// Recharge tank (create inventory movement, add liters) - admin
+router.post('/:tankId/recharge', auth, isAdmin, async (req, res) => {
+  try{
+    const t = await Tank.findById(req.params.tankId).populate('product')
+    if (!t) return res.status(404).json({ error: 'Tanque no encontrado' })
+    const { liters } = req.body
+    const prod = t.product
+    prod.quantity = (prod.quantity || 0) + (liters || 0)
+    await prod.save()
+    // notify if tank low
+    try{ const { notifyTankLevel } = require('../utils/notify'); notifyTankLevel(prod) }catch(e){}
+    const m = await InventoryMovement.create({ product: prod._id, type: 'in', quantity: liters || 0, notes: 'Recarga tanque', user: req.user?.id })
+    res.json({ tank: t, product: prod, movement: m })
+  }catch(err){ res.status(400).json({ error: err.message }) }
+})
+
+// Fill bottles from tank: consumes liters and optionally creates a Sale/Payment
+router.post('/:tankId/fill', auth, isAdmin, async (req, res) => {
+  try{
+    const t = await Tank.findById(req.params.tankId).populate('product')
+    if (!t) return res.status(404).json({ error: 'Tanque no encontrado' })
+    const { count = 1, house, usedPrepaid = false, notes } = req.body
+    const { consumeFromTank } = require('../utils/tankOperations')
+    const result = await consumeFromTank({ tankId: req.params.tankId, count, house, usedPrepaid, notes, userId: req.user.id, createDelivery: true })
+    res.json({ tank: result.tankEntry, product: result.product, movement: result.movement, payment: result.payment, litersUsed: result.litersNeeded })
+  }catch(err){ res.status(400).json({ error: err.message }) }
+})
+
+module.exports = router
+

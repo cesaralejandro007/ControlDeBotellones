@@ -1,0 +1,26 @@
+version: '3.8'
+services:
+  mongo:
+    image: mongo:6.0
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "27017:27017"
+
+  server:
+    build: ./server
+    restart: unless-stopped
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/urbanizacion
+      - JWT_SECRET=change_this_secret
+      - PORT=4000
+    ports:
+      - "4000:4000"
+    depends_on:
+      - mongo
+
+volumes:
+  mongo-data:
+
+# Nota: el cliente React se puede ejecutar localmente con `npm run dev`.

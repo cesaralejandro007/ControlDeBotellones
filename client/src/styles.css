@@ -1,0 +1,28 @@
+.app { }
+body { font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; margin: 0; padding: 0; }
+.container { max-width: 1100px }
+.form { margin: 12px 0 }
+.swal2-popup .swal2-input { margin: 6px 0 }
+
+/* small responsive tweaks */
+@media (max-width: 576px) {
+	.container { padding: 0 12px }
+}
+
+/* Tema azul claro personalizado */
+:root{
+	--primary-900: #0b5ed7;
+	--primary-700: #0d6efd;
+	--primary-500: #66b0ff;
+	--surface: #f7fbff;
+}
+
+body { background: var(--surface); }
+.card { border-radius: 10px }
+.card .card-title, .card .card-subtitle { color: var(--primary-900) }
+.badge.bg-primary { background-color: var(--primary-700) !important }
+.btn-primary { background-color: var(--primary-700); border-color: var(--primary-700) }
+.btn-outline-primary { color: var(--primary-700); border-color: var(--primary-700) }
+
+.table thead th { background: rgba(13,110,253,0.06) }
+
