@@ -16,7 +16,11 @@ const PaymentSchema = new mongoose.Schema({
   appliedAmount: { type: Number, default: 0 },
   // record of applied operation idempotency keys to avoid double applying the same targets
   appliedKeys: { type: [String], default: [] },
-  idempotencyKey: { type: String, default: null }
+  idempotencyKey: { type: String, default: null },
+  reference: { type: String },
+  bank: { type: String },
+  identification: { type: String },
+  phone: { type: String },
 }, { timestamps: true });
 
 PaymentSchema.index({ idempotencyKey: 1 }, { unique: true, sparse: true });

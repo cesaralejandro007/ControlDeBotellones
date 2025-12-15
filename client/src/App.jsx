@@ -128,7 +128,7 @@ export default function App() {
       </nav>
 
       {/* 🔹 CONTENT */}
-      <main className="container py-4">
+      <main className="py-4">
         <Routes>
           <Route path="/" element={<Houses />} />
           <Route path="/login" element={<Login />} />

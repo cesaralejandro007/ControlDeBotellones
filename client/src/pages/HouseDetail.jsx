@@ -120,26 +120,121 @@ export default function HouseDetail(){
         return { selectedIds, total }
       }
     })
-    if (!selected) return
-    if (!selected.selectedIds.length) return Swal.fire('Aviso','No seleccionaste deudas','info')
-    if (isApplying) return
-    setIsApplying(true)
+if (!selected) return
+if (!selected.selectedIds.length) {
+  return Swal.fire('Aviso','No seleccionaste deudas','info')
+}
+
+/* 👉 AQUÍ VA EL MODAL DE DATOS DEL PAGO */
+const { value: paymentData } = await Swal.fire({
+  title: 'Datos del pago',
+  html: `
+    <input id="ref" class="swal2-input" placeholder="Referencia">
+    <input id="bank" class="swal2-input" placeholder="Banco">
+    <input id="id" class="swal2-input" placeholder="Cédula / ID">
+    <input id="phone" class="swal2-input" placeholder="Teléfono afiliado">
+  `,
+  focusConfirm: false,
+  preConfirm: () => {
+    const reference = document.getElementById('ref').value
+    const bank = document.getElementById('bank').value
+    const identification = document.getElementById('id').value
+    const phone = document.getElementById('phone').value
+
+    if (!reference || !bank || !identification || !phone) {
+      Swal.showValidationMessage('Todos los campos son obligatorios')
+      return
+    }
+
+    return { reference, bank, identification, phone }
+  }
+})
+
+if (!paymentData) return
+if (isApplying) return
+
+setIsApplying(true)
+
     try{
     // create a confirmed payment for the total and atomically apply to targets via house pay
     const idempotencyKey = (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() : Math.random().toString(36).slice(2)
-    const res = await axios.post(`http://localhost:4000/api/houses/${id}/pay`, { amount: selected.total, description: 'Pago por liquidación de deudas', prepaidBotellones: 0, targets: selected.selectedIds, idempotencyKey })
+    const res = await axios.post(`http://localhost:4000/api/houses/${id}/pay`, {
+      amount: selected.total,
+      description: 'Pago por liquidación de deudas',
+      prepaidBotellones: 0,
+      targets: selected.selectedIds,
+      reference: paymentData.reference,
+      bank: paymentData.bank,
+      identification: paymentData.identification,
+      phone: paymentData.phone,
+      idempotencyKey
+    })
       const paymentCreated = res.data.payment
       Swal.fire('OK','Pago registrado y aplicado','success')
       await fetch()
     }catch(err){ Swal.fire('Error', err.response?.data?.error || err.message, 'error') } finally { setIsApplying(false) }
   }
 
-  const confirmPayment = async (paymentId) => {
-    try{
-      await axios.put(`http://localhost:4000/api/payments/${paymentId}/confirm`)
-      Swal.fire('OK','Pago actualizado','success')
-      await fetch()
-    }catch(err){ Swal.fire('Error', err.response?.data?.error || err.message, 'error') }
+const confirmPayment = async (paymentId) => {
+  const { value: paymentData } = await Swal.fire({
+    title: 'Confirmar pago',
+    html: `
+      <input id="ref" class="swal2-input" placeholder="Referencia">
+      <input id="bank" class="swal2-input" placeholder="Banco">
+      <input id="id" class="swal2-input" placeholder="Cédula / ID">
+      <input id="phone" class="swal2-input" placeholder="Teléfono afiliado">
+    `,
+    focusConfirm: false,
+    showCancelButton: true,
+    confirmButtonText: 'Confirmar',
+    preConfirm: () => {
+      const reference = document.getElementById('ref').value
+      const bank = document.getElementById('bank').value
+      const identification = document.getElementById('id').value
+      const phone = document.getElementById('phone').value
+
+      if (!reference || !bank || !identification || !phone) {
+        Swal.showValidationMessage('Todos los campos son obligatorios')
+        return
+      }
+
+      return { reference, bank, identification, phone }
+    }
+  })
+
+  if (!paymentData) return
+
+  try {
+    await axios.put(
+      `http://localhost:4000/api/payments/${paymentId}/confirm`,
+      paymentData
+    )
+    Swal.fire('OK', 'Pago confirmado correctamente', 'success')
+    await fetch()
+  } catch (err) {
+    Swal.fire('Error', err.response?.data?.error || err.message, 'error')
+  }
+}
+
+
+    const showPaymentDetails = (payment) => {
+    Swal.fire({
+      title: 'Detalles del pago',
+      html: `
+        <div style="text-align:left">
+          <p><strong>Fecha:</strong> ${new Date(payment.date).toLocaleString()}</p>
+          <p><strong>Monto:</strong> $${Number(payment.amount).toFixed(2)}</p>
+          <hr/>
+          <p><strong>Referencia:</strong> ${payment.reference || '—'}</p>
+          <p><strong>Banco:</strong> ${payment.bank || '—'}</p>
+          <p><strong>Cédula:</strong> ${payment.identification || '—'}</p>
+          <p><strong>Teléfono:</strong> ${payment.phone || '—'}</p>
+          <hr/>
+          <p><strong>Descripción:</strong> ${payment.description || '—'}</p>
+        </div>
+      `,
+      confirmButtonText: 'Cerrar'
+    })
   }
 
   if (!detail) return <div className="text-center py-5">Cargando detalle...</div>
@@ -154,12 +249,14 @@ export default function HouseDetail(){
     const text = searchPayment.toLowerCase();
 
     const date = new Date(p.date).toLocaleString().toLowerCase();
+    const reference = (p.reference || '').toLowerCase();
     const amount = Number(p.amount).toFixed(2);
     const description = (p.description || '').toLowerCase();
     const status = (p.confirmed || p.settled) ? 'confirmado' : 'pendiente';
 
     return (
       date.includes(text) ||
+      reference.includes(text) ||
       amount.includes(text) ||
       description.includes(text) ||
       status.includes(text)
@@ -186,7 +283,7 @@ export default function HouseDetail(){
 
 
   return (
-<div className="container mt-4" style={{ minHeight: '90vh', backgroundColor: '#f8f9fa' }}>
+<div className="gap-4 mx-5" style={{ minHeight: '90vh', backgroundColor: '#f8f9fa' }}>
   <div className="row g-3">
     {/* ----- LADO IZQUIERDO ----- */}
     <div className="col-md-4">
@@ -224,7 +321,6 @@ export default function HouseDetail(){
       <div className="card shadow-sm border-0 mb-3">
         <div className="card-body">
           <h6 className="text-secondary">Deuda estimada</h6>
-          <p className="mb-1">Precio botellón: ${debtInfo?.pricePerBotellon ?? 0}</p>
           <p className="mb-1">Total entregado: {debtInfo?.totalDelivered ?? 0} botellones</p>
           <p className="mb-1">Pagos realizados: ${Number(debtInfo?.paymentsTotal || 0).toFixed(2)}</p>
           <div className="d-flex justify-content-between align-items-center mt-2">
@@ -315,48 +411,117 @@ export default function HouseDetail(){
           <h5>Pagos</h5>
           <div className="table-responsive" style={{ maxHeight: '250px', overflowY: 'auto' }}>
             <div className="mb-2">
-  <input
-    type="text"
-    className="form-control form-control-sm"
-    placeholder="Buscar por fecha, monto, descripción o estado..."
-    value={searchPayment}
-    onChange={(e) => setSearchPayment(e.target.value)}
-  />
-</div>
-            <table className="table table-sm table-striped align-middle mb-0">
-              <thead className="table-light">
+            <input
+              type="text"
+              className="form-control form-control-sm"
+              placeholder="Buscar por fecha, referencia, monto, descripción o estado..."
+              value={searchPayment}
+              onChange={(e) => setSearchPayment(e.target.value)}
+            />
+            </div>
+            <table className="table table-sm table-hover align-middle mb-0">
+              <thead className="table-light text-center">
                 <tr>
                   <th>Fecha</th>
-                  <th>Monto</th>
-                  <th>Adelantados</th>
-                  <th>Descripción</th>
+                  <th>Referencia</th>
+                  <th className="text-end">Monto</th>
+                  <th>Adelantos</th>
+                  <th className="text-start">Descripción</th>
                   <th>Estado</th>
-                  <th></th>
+                  <th>Acciones</th>
                 </tr>
               </thead>
+
               <tbody>
-                {filteredPayments.map(p => (         
+                {filteredPayments.map(p => {
+                  const isConfirmed = p.confirmed || p.settled
+
+                  return (
                     <tr key={p._id}>
-                      <td>{new Date(p.date).toLocaleString()}</td>
-                      <td>${Number(p.amount).toFixed(2)}</td>
-                      <td>{p.prepaidBotellones}</td>
-                      <td>{p.description || '-'}</td>
-                      <td>
-                      {(p.confirmed || p.settled) ? (
-                        <span className="badge bg-success">Confirmado</span>
-                      ) : (
-                        <span className="badge bg-warning">Pendiente</span>
-                      )}
-                    </td>
-                    <td>
-                      {!p.confirmed && !p.settled && user?.role === 'admin' && (
-                        <button className="btn btn-sm btn-outline-success shadow-sm" onClick={() => confirmPayment(p._id)}>Confirmar</button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                      {/* Fecha */}
+                      <td className="text-nowrap">
+                        {new Date(p.date).toLocaleDateString()}<br />
+                        <small className="text-muted">
+                          {new Date(p.date).toLocaleTimeString()}
+                        </small>
+                      </td>
+                      <td className="text-start" style={{ maxWidth: '220px' }}>
+                        <span
+                          className="text-truncate d-inline-block"
+                          style={{ maxWidth: '100%' }}
+                          title={p.reference || ''}
+                        >
+                          {p.reference || '—'}
+                        </span>
+                      </td>
+                      {/* Monto */}
+                      <td className="text-end fw-semibold">
+                        ${Number(p.amount).toFixed(2)}
+                      </td>
+
+                      {/* Adelantos */}
+                      <td className="text-center">
+                        {p.prepaidBotellones > 0 ? (
+                          <span className="badge bg-info text-dark">
+                            {p.prepaidBotellones}
+                          </span>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+
+                      {/* Descripción */}
+                      <td className="text-start" style={{ maxWidth: '220px' }}>
+                        <span
+                          className="text-truncate d-inline-block"
+                          style={{ maxWidth: '100%' }}
+                          title={p.description || ''}
+                        >
+                          {p.description || '—'}
+                        </span>
+                      </td>
+
+                      {/* Estado */}
+                      <td className="text-center">
+                        {isConfirmed ? (
+                          <span className="badge bg-success">
+                            ✔ Confirmado
+                          </span>
+                        ) : (
+                          <span className="badge bg-warning text-dark">
+                            ⏳ Pendiente
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Acciones */}
+                      <td className="text-center">
+                        <div className="d-flex justify-content-center gap-1">
+                          <button
+                            className="btn btn-sm btn-outline-info"
+                            title="Ver detalles"
+                            onClick={() => showPaymentDetails(p)}
+                          >
+                            ℹ️
+                          </button>
+
+                          {!isConfirmed && user?.role === 'admin' && (
+                            <button
+                              className="btn btn-sm btn-outline-success"
+                              title="Confirmar pago"
+                              onClick={() => confirmPayment(p._id)}
+                            >
+                              ✔
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
+
           </div>
         </div>
       </div>

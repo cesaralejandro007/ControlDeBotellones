@@ -99,32 +99,43 @@ router.post('/', auth, isAdmin, async (req, res) => {
   } catch (err) { console.error('[ERROR] apply payment', err && err.message); console.error(err.stack); res.status(400).json({ error: err.message }); }
 });
 
-// toggle confirmar / tachar pago (solo admin)
+// Confirmar pago con datos bancarios (solo admin)
 router.put('/:id/confirm', auth, isAdmin, async (req, res) => {
   try {
-    let p = await Payment.findById(req.params.id);
-    if (!p) { console.log('[DEBUG] Payment not found', req.params.id); return res.status(404).json({ error: 'No encontrado' }) }
-    // Toggle confirmation
-    const prevConfirmed = p.confirmed
-    p.confirmed = !p.confirmed;
-    // NOTE: We no longer auto-allocate confirmed payments to pending debts.
-    // Use POST /api/payments/:id/apply to allocate this payment to outstanding debts.
-    await p.save();
-    // If we are toggling to unconfirmed (cancelled), clean up any zero-amount unsettled payments for the house.
-    if (prevConfirmed === true && p.confirmed === false) {
-      // Mark any zero-amount unsettled debts as settled instead of deleting to avoid data loss and foreign key issues.
-      try {
-        await Payment.updateMany(
-          { house: p.house, confirmed: false, settled: false, amount: { $lte: 0 } },
-          { $set: { settled: true, settledAt: new Date(), settledBy: null, amount: 0 } }
-        );
-      } catch (err) {
-        console.error('[WARN] Failed cleanup (mark settled) of zero debts on payment cancellation', err && err.message)
-      }
+    const { reference, bank, identification, phone } = req.body
+
+    if (!reference || !bank || !identification || !phone) {
+      return res.status(400).json({
+        error: 'Datos bancarios incompletos'
+      })
     }
-    res.json(p);
-  } catch (err) { console.error('[ERROR] Apply route failed', err && err.message); console.error(err && err.stack); const showStack = process.env.NODE_ENV === 'test' || !!process.env.JEST_WORKER_ID; res.status(400).json({ error: err.message, stack: showStack ? (err && err.stack) : undefined }); }
-});
+
+    const p = await Payment.findById(req.params.id)
+    if (!p) {
+      return res.status(404).json({ error: 'Pago no encontrado' })
+    }
+
+    if (p.confirmed) {
+      return res.status(400).json({ error: 'El pago ya está confirmado' })
+    }
+
+    p.confirmed = true
+    p.confirmedAt = new Date()
+    p.confirmedBy = req.user?._id || null
+
+    p.reference = reference
+    p.bank = bank
+    p.identification = identification
+    p.phone = phone
+
+    await p.save()
+
+    res.json(p)
+  } catch (err) {
+    console.error('[ERROR] Confirm payment failed', err)
+    res.status(500).json({ error: err.message })
+  }
+})
 
 // Apply a confirmed payment to pending debts - admin only
 router.post('/:id/apply', auth, isAdmin, async (req, res) => {
