@@ -13,6 +13,10 @@ export default function HouseDetail(){
   const [debtInfo, setDebtInfo] = useState(null)
   const [tankInfo, setTankInfo] = useState(null)
   const [isApplying, setIsApplying] = useState(false)
+  
+  const [searchPayment, setSearchPayment] = useState('');
+  const [searchDelivery, setSearchDelivery] = useState('');
+
   const { user } = useAuth()
   const navigate = useNavigate()
 
@@ -142,183 +146,261 @@ export default function HouseDetail(){
 
   const { house, payments, deliveries, balance } = detail
 
+  const filteredPayments = payments
+  .filter(p => Math.round(Number(p.amount || 0) * 100) > 0)
+  .filter(p => {
+    if (!searchPayment) return true;
+
+    const text = searchPayment.toLowerCase();
+
+    const date = new Date(p.date).toLocaleString().toLowerCase();
+    const amount = Number(p.amount).toFixed(2);
+    const description = (p.description || '').toLowerCase();
+    const status = (p.confirmed || p.settled) ? 'confirmado' : 'pendiente';
+
+    return (
+      date.includes(text) ||
+      amount.includes(text) ||
+      description.includes(text) ||
+      status.includes(text)
+    );
+  });
+
+  const filteredDeliveries = deliveries.filter(d => {
+    if (!searchDelivery) return true;
+
+    const text = searchDelivery.toLowerCase();
+
+    const date = new Date(d.date).toLocaleString().toLowerCase();
+    const count = String(d.count);
+    const used = d.usedPrepaid ? 'si' : 'no';
+    const notes = (d.notes || '').toLowerCase();
+
+    return (
+      date.includes(text) ||
+      count.includes(text) ||
+      used.includes(text) ||
+      notes.includes(text)
+    );
+  });
+
+
   return (
-    <div className="container mt-3">
-      <div className="row g-3">
-        <div className="col-md-4">
-          <div className="card shadow-sm border-0">
-            <div className="card-body">
-              <h4 className="card-title text-primary">{house.code}</h4>
-              <h5 className="card-subtitle mb-2 text-muted">{house.ownerName}</h5>
-              <p className="mb-1"><strong>Teléfono:</strong> {house.phone || '—'}</p>
-              <p className="mb-1"><strong>Email:</strong> {house.email || '—'}</p>
-              <p className="mb-1"><strong>Dirección:</strong> {house.address || '—'}</p>
-              {house.notes && <p className="mt-2"><strong>Notas:</strong> {house.notes}</p>}
-            </div>
-          </div>
-
-          <div className="card mt-3 shadow-sm border-0">
-            <div className="card-body">
-              <h6 className="text-secondary">Balance de anticipos</h6>
-              <div className="d-flex justify-content-between align-items-center">
-                <div>
-                  <div>Prepaid: <strong>{balance.prepaid}</strong></div>
-                  <div>Usados: <strong>{balance.used}</strong></div>
-                </div>
-                <div>
-                  <div className={"badge bg-" + (balance.balance >= 0 ? 'primary' : 'danger')}>Saldo: {balance.balance}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="card mt-3 shadow-sm border-0">
-            <div className="card-body">
-              <h6 className="text-secondary">Deuda estimada</h6>
-              <p className="mb-1">Precio botellón: ${debtInfo?.pricePerBotellon ?? 0}</p>
-              <p className="mb-1">Total entregado: {debtInfo?.totalDelivered ?? 0} botellones</p>
-              <p className="mb-1">Pagos realizados: ${debtInfo?.paymentsTotal ?? 0}</p>
-                          <div className="d-flex justify-content-between align-items-center">
-                            <div>Deuda pendiente: <strong>${Number(debtInfo?.pendingAmount || 0).toFixed(2)}</strong></div>
-                            <div>
-                              <button className="btn btn-sm btn-primary" onClick={payDebt} disabled={!debtInfo || (debtInfo.pendingAmount<=0) || isApplying}>{isApplying ? 'Procesando...' : 'Pagar deuda'}</button>
-                            </div>
-                          </div>
-            </div>
-          </div>
-
-          <div className="card mt-3 shadow-sm border-0">
-            <div className="card-body">
-              <h6 className="text-secondary">Botellones en tanque</h6>
-              {tankInfo ? (
-                <div>
-                  <p className="mb-1">Litros actuales: <strong>{tankInfo.quantity}</strong> / {tankInfo.capacity || '—'} L</p>
-                  <p className="mb-1">Botellones aproximados: <strong>{Math.floor((tankInfo.quantity||0)/20)}</strong></p>
-                  <p className="mb-1">Precio llenado: <strong>${tankInfo.pricePerFill ?? 0}</strong></p>
-                  <div className="progress" style={{height: '14px'}}>
-                    {(() => {
-                      const pct = tankInfo.capacity ? Math.min(100, Math.round((tankInfo.quantity / tankInfo.capacity) * 100)) : 0
-                      const cls = pct >= 70 ? 'bg-success' : (pct >= 30 ? 'bg-warning' : 'bg-danger')
-                      return <div className={`progress-bar ${cls}`} role="progressbar" style={{width: pct + '%'}} aria-valuenow={pct} aria-valuemin="0" aria-valuemax="100">{pct}%</div>
-                    })()}
-                  </div>
-                </div>
-              ) : (
-                <p className="mb-0 text-muted">Tanque no registrado</p>
-              )}
-            </div>
-          </div>
-
-          <div className="card mt-3 shadow-sm border-0">
-            <div className="card-body">
-              <h6 className="text-secondary">Stock botellones</h6>
-              <p className="mb-0">{botellonStock === null ? 'No registrado' : botellonStock}</p>
-            </div>
-          </div>
+<div className="container mt-4" style={{ minHeight: '90vh', backgroundColor: '#f8f9fa' }}>
+  <div className="row g-3">
+    {/* ----- LADO IZQUIERDO ----- */}
+    <div className="col-md-4">
+      {/* Datos generales */}
+      <div className="card shadow-sm border-0 mb-3">
+        <div className="card-body">
+          <h4 className="card-title text-primary">{house.code}</h4>
+          <h5 className="card-subtitle mb-2 text-muted">{house.ownerName}</h5>
+          <p className="mb-1"><strong>Teléfono:</strong> {house.phone || '—'}</p>
+          <p className="mb-1"><strong>Email:</strong> {house.email || '—'}</p>
+          <p className="mb-1"><strong>Dirección:</strong> {house.address || '—'}</p>
+          {house.notes && <p className="mt-2"><strong>Notas:</strong> {house.notes}</p>}
         </div>
+      </div>
 
-        <div className="col-md-8">
-          <div className="card mb-3 shadow-sm border-0">
-            <div className="card-body">
-              <h5 className="card-title">Registrar entrega</h5>
-              <div className="row g-2 align-items-end">
-                <div className="col-md-4">
-                  <label className="form-label">Cantidad</label>
-                  <input className="form-control" type="number" min="1" value={deliveryCount} onChange={e=>setDeliveryCount(e.target.value)} />
-                </div>
-                <div className="col-md-4">
-                  <label className="form-label">Usar anticipo</label>
-                  <select className="form-select" value={usePrepaid ? 'si' : 'no'} onChange={e=>setUsePrepaid(e.target.value === 'si')}>
-                    <option value="no">No</option>
-                    <option value="si">Sí</option>
-                  </select>
-                </div>
-                <div className="col-md-4 d-flex">
-                  <button className="btn btn-primary me-2" onClick={()=>addDelivery(usePrepaid)} disabled={usePrepaid && ((balance?.balance || 0) < (parseInt(deliveryCount) || 0))}>Registrar entrega</button>
-                </div>
-              </div>
-              <div className="mt-2">
-                {tankInfo && (
-                  <small className="text-muted">Litros requeridos: <strong>{(deliveryCount || 0) * (tankInfo.litersPerBottle || 20)}</strong> L • Estimado a cobrar: <strong>${((deliveryCount || 0) * (tankInfo.pricePerFill || 0)).toFixed(2)}</strong></small>
-                )}
-                {usePrepaid && ((balance?.balance || 0) < (parseInt(deliveryCount) || 0)) && (
-                  <div className="text-danger mt-1">Saldo de anticipos insuficiente para usar anticipo en esta entrega</div>
-                )}
-              </div>
+      {/* Balance de anticipos */}
+      <div className="card shadow-sm border-0 mb-3">
+        <div className="card-body">
+          <h6 className="text-secondary">Balance de anticipos</h6>
+          <div className="d-flex justify-content-between align-items-center">
+            <div>
+              <div>Prepaid: <strong>{balance.prepaid}</strong></div>
+              <div>Usados: <strong>{balance.used}</strong></div>
             </div>
-          </div>
-
-          <div className="card mb-3 shadow-sm border-0">
-            <div className="card-body">
-              <h5>Pagos</h5>
-              <div className="table-responsive">
-                <table className="table table-sm table-striped">
-                  <thead>
-                    <tr>
-                      <th>Fecha</th>
-                      <th>Monto</th>
-                      <th>Adelantados</th>
-                      <th>Descripción</th>
-                      <th>Estado</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {payments.filter(p => !(p.amount === 0 && p.settled)).map(p=> (
-                      <tr key={p._id}>
-                        <td>{new Date(p.date).toLocaleString()}</td>
-                        <td>${Number(p.amount || 0).toFixed(2)}</td>
-                        <td>{p.prepaidBotellones}</td>
-                        <td>{p.description || '-'}</td>
-                        <td>
-                          {(p.confirmed || p.settled) ? (
-                            <span className="badge bg-success">Confirmado</span>
-                          ) : (
-                            <span className="badge bg-warning">Pendiente</span>
-                          )}
-                        </td>
-                        <td>
-                          {!p.confirmed && !p.settled && user?.role === 'admin' && (
-                            <button className="btn btn-sm btn-outline-success" onClick={()=>confirmPayment(p._id)}>Confirmar</button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <div className="card mb-3 shadow-sm border-0">
-            <div className="card-body">
-              <h5>Entregas</h5>
-              <div className="table-responsive">
-                <table className="table table-sm table-hover">
-                  <thead>
-                    <tr>
-                      <th>Fecha</th>
-                      <th>Cantidad</th>
-                      <th>Usó anticipo</th>
-                      <th>Notas</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {deliveries.map(d=> (
-                      <tr key={d._id}>
-                        <td>{new Date(d.date).toLocaleString()}</td>
-                        <td>{d.count}</td>
-                        <td>{d.usedPrepaid ? <span className="badge bg-info text-dark">Sí</span> : 'No'}</td>
-                        <td>{d.notes || '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            <div>
+              <div className={`badge ${balance.balance >= 0 ? 'bg-primary' : 'bg-danger'}`}>
+                Saldo: {balance.balance}
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Deuda estimada */}
+      <div className="card shadow-sm border-0 mb-3">
+        <div className="card-body">
+          <h6 className="text-secondary">Deuda estimada</h6>
+          <p className="mb-1">Precio botellón: ${debtInfo?.pricePerBotellon ?? 0}</p>
+          <p className="mb-1">Total entregado: {debtInfo?.totalDelivered ?? 0} botellones</p>
+          <p className="mb-1">Pagos realizados: ${Number(debtInfo?.paymentsTotal || 0).toFixed(2)}</p>
+          <div className="d-flex justify-content-between align-items-center mt-2">
+            <div>Deuda pendiente: <strong>${Number(debtInfo?.pendingAmount || 0).toFixed(2)}</strong></div>
+            <button
+              className="btn btn-sm btn-primary shadow-sm"
+              onClick={payDebt}
+              disabled={
+                !debtInfo ||
+                Math.round(Number(debtInfo.pendingAmount || 0) * 100) <= 0 ||
+                isApplying
+              }
+            >
+              {isApplying ? 'Procesando...' : 'Pagar deuda'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Botellones en tanque */}
+      <div className="card shadow-sm border-0 mb-3">
+        <div className="card-body">
+          <h6 className="text-secondary">Botellones en tanque</h6>
+          {tankInfo ? (
+            <>
+              <p className="mb-1">Litros actuales: <strong>{tankInfo.quantity}</strong> / {tankInfo.capacity || '—'} L</p>
+              <p className="mb-1">Botellones aproximados: <strong>{Math.floor((tankInfo.quantity||0)/20)}</strong></p>
+              <p className="mb-1">Precio llenado: <strong>${tankInfo.pricePerFill ?? 0}</strong></p>
+              <div className="progress" style={{ height: '14px', borderRadius: '6px' }}>
+                {(() => {
+                  const pct = tankInfo.capacity ? Math.min(100, Math.round((tankInfo.quantity / tankInfo.capacity) * 100)) : 0
+                  const cls = pct >= 70 ? 'bg-success' : (pct >= 30 ? 'bg-warning' : 'bg-danger')
+                  return <div className={`progress-bar ${cls}`} role="progressbar" style={{width: pct + '%'}} aria-valuenow={pct} aria-valuemin="0" aria-valuemax="100">{pct}%</div>
+                })()}
+              </div>
+            </>
+          ) : (
+            <p className="mb-0 text-muted">Tanque no registrado</p>
+          )}
+        </div>
+      </div>
+
+      {/* Stock botellones */}
+      <div className="card shadow-sm border-0 mb-3">
+        <div className="card-body">
+          <h6 className="text-secondary">Stock botellones</h6>
+          <p className="mb-0">{botellonStock === null ? 'No registrado' : botellonStock}</p>
+        </div>
+      </div>
     </div>
+
+    {/* ----- LADO DERECHO ----- */}
+    <div className="col-md-8">
+      {/* Registrar entrega */}
+      <div className="card mb-3 shadow-sm border-0">
+        <div className="card-body">
+          <h5 className="card-title">Registrar entrega</h5>
+          <div className="row g-2 align-items-end">
+            <div className="col-md-4">
+              <label className="form-label">Cantidad</label>
+              <input className="form-control" type="number" min="1" value={deliveryCount} onChange={e=>setDeliveryCount(e.target.value)} />
+            </div>
+            <div className="col-md-4">
+              <label className="form-label">Usar anticipo</label>
+              <select className="form-select" value={usePrepaid ? 'si' : 'no'} onChange={e=>setUsePrepaid(e.target.value === 'si')}>
+                <option value="no">No</option>
+                <option value="si">Sí</option>
+              </select>
+            </div>
+            <div className="col-md-4 d-flex">
+              <button className="btn btn-primary me-2 shadow-sm" onClick={()=>addDelivery(usePrepaid)} disabled={usePrepaid && ((balance?.balance || 0) < (parseInt(deliveryCount) || 0))}>Registrar entrega</button>
+            </div>
+          </div>
+          {tankInfo && (
+            <small className="text-muted mt-2 d-block">
+              Litros requeridos: <strong>{(deliveryCount || 0) * (tankInfo.litersPerBottle || 20)}</strong> L • Estimado a cobrar: <strong>${((deliveryCount || 0) * (tankInfo.pricePerFill || 0)).toFixed(2)}</strong>
+            </small>
+          )}
+          {usePrepaid && ((balance?.balance || 0) < (parseInt(deliveryCount) || 0)) && (
+            <div className="text-danger mt-1">Saldo de anticipos insuficiente</div>
+          )}
+        </div>
+      </div>
+
+      {/* Pagos con scroll */}
+      <div className="card mb-3 shadow-sm border-0">
+        <div className="card-body">
+          <h5>Pagos</h5>
+          <div className="table-responsive" style={{ maxHeight: '250px', overflowY: 'auto' }}>
+            <div className="mb-2">
+  <input
+    type="text"
+    className="form-control form-control-sm"
+    placeholder="Buscar por fecha, monto, descripción o estado..."
+    value={searchPayment}
+    onChange={(e) => setSearchPayment(e.target.value)}
+  />
+</div>
+            <table className="table table-sm table-striped align-middle mb-0">
+              <thead className="table-light">
+                <tr>
+                  <th>Fecha</th>
+                  <th>Monto</th>
+                  <th>Adelantados</th>
+                  <th>Descripción</th>
+                  <th>Estado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredPayments.map(p => (         
+                    <tr key={p._id}>
+                      <td>{new Date(p.date).toLocaleString()}</td>
+                      <td>${Number(p.amount).toFixed(2)}</td>
+                      <td>{p.prepaidBotellones}</td>
+                      <td>{p.description || '-'}</td>
+                      <td>
+                      {(p.confirmed || p.settled) ? (
+                        <span className="badge bg-success">Confirmado</span>
+                      ) : (
+                        <span className="badge bg-warning">Pendiente</span>
+                      )}
+                    </td>
+                    <td>
+                      {!p.confirmed && !p.settled && user?.role === 'admin' && (
+                        <button className="btn btn-sm btn-outline-success shadow-sm" onClick={() => confirmPayment(p._id)}>Confirmar</button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {/* Entregas con scroll */}
+      <div className="card mb-3 shadow-sm border-0">
+        <div className="card-body">
+          <h5>Entregas</h5>
+          <div className="table-responsive" style={{ maxHeight: '250px', overflowY: 'auto' }}>
+            <div className="mb-2">
+              <input
+                type="text"
+                className="form-control form-control-sm"
+                placeholder="Buscar por fecha, cantidad, anticipo o notas..."
+                value={searchDelivery}
+                onChange={(e) => setSearchDelivery(e.target.value)}
+              />
+            </div>
+            <table className="table table-sm table-hover align-middle mb-0">
+              <thead className="table-light">
+                <tr>
+                  <th>Fecha</th>
+                  <th>Cantidad</th>
+                  <th>Usó anticipo</th>
+                  <th>Notas</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredDeliveries.map(d => (
+                  <tr key={d._id}>
+                    <td>{new Date(d.date).toLocaleString()}</td>
+                    <td>{d.count}</td>
+                    <td>{d.usedPrepaid ? <span className="badge bg-info text-dark">Sí</span> : 'No'}</td>
+                    <td>{d.notes || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
   )
 }

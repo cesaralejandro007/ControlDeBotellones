@@ -10,6 +10,10 @@ const { supportsTransactions } = require('../utils/mongoSupport')
 
 const Product = require('../models/Product')
 
+function normalizeAmount(n) {
+  return Math.round((Number(n) + Number.EPSILON) * 100) / 100
+}
+
 // listar
 router.get('/', auth, async (req, res) => {
   const houses = await House.find().sort({ code: 1 });
@@ -123,7 +127,7 @@ router.post('/:id/pay', auth, async (req, res) => {
           // Another request already applied these targets; reload payment and skip application
           p = await Payment.findById(p._id)
         } else {
-        let remaining = initialAmount
+        let remaining = normalizeAmount(initialAmount)
         const hasTransactions = await supportsTransactions()
         if (hasTransactions) {
           const session = await mongoose.startSession()
@@ -134,7 +138,7 @@ router.post('/:id/pay', auth, async (req, res) => {
               for (const t of targets) {
                 if (remaining <= 0) break
                 const applied = await applyPaymentToTarget(payment, t, remaining, session)
-                if (applied > 0) remaining -= applied
+                if (applied > 0) remaining = normalizeAmount(remaining - applied)
               }
               // Ensure any targets with amount <= 0 are marked settled inside transaction
               const targetIds = targets.map(t => typeof t === 'string' ? t : (t && t.id)).filter(Boolean)
@@ -157,7 +161,7 @@ router.post('/:id/pay', auth, async (req, res) => {
           for (const t of targets) {
             if (remaining <= 0) break
             const applied = await applyPaymentToTarget(p, t, remaining, null)
-            if (applied > 0) remaining -= applied
+            if (applied > 0) remaining = normalizeAmount(remaining - applied)
           }
           const reservedFallback = reserved // the findOneAndUpdate result above
           // Non-transactional fallback: mark any target with amount <=0 as settled

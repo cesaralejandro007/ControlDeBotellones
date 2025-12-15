@@ -9,7 +9,12 @@ const isAdmin = require('../middleware/isAdmin');
 
 // listar pagos
 router.get('/', auth, async (req, res) => {
-  const items = await Payment.find().populate('house').sort({ date: -1 });
+  const items = await Payment.find({
+    amount: { $gt: 0 }
+  })
+    .populate('house')
+    .sort({ date: -1 });
+
   res.json(items);
 });
 

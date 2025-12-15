@@ -1,52 +1,146 @@
 import React from 'react'
-import { Routes, Route, Link } from 'react-router-dom'
+import { Routes, Route, NavLink } from 'react-router-dom'
+import { useAuth } from './context/AuthContext'
+
 import Houses from './pages/Houses'
 import Inventory from './pages/Inventory'
 import Payments from './pages/Payments'
 import Login from './pages/Login'
-import HouseDetail from './pages/HouseDetail'
 import Register from './pages/Register'
+import HouseDetail from './pages/HouseDetail'
 import Movements from './pages/Movements'
-import { useAuth } from './context/AuthContext'
-import { FaHome, FaMoneyBillWave, FaBoxOpen, FaBoxes } from 'react-icons/fa'
-import { FaTachometerAlt, FaUsers } from 'react-icons/fa'
 import Dashboard from './pages/Dashboard'
 import TankDashboard from './pages/TankDashboard'
 import TankManagement from './pages/TankManagement'
 import Users from './pages/Users'
 
-export default function App(){
+import {
+  FaHome,
+  FaMoneyBillWave,
+  FaBoxOpen,
+  FaBoxes,
+  FaTachometerAlt,
+  FaUsers,
+  FaWater
+} from 'react-icons/fa'
+
+export default function App() {
   const { user, logout } = useAuth()
+
+  const linkClass = ({ isActive }) =>
+    `nav-link d-flex align-items-center gap-1 ${isActive ? 'active fw-semibold' : ''}`
+
   return (
     <div className="app">
-      <header className="bg-light border-bottom mb-3">
-        <div className="container d-flex align-items-center justify-content-between py-2">
-          <h1 className="h4 m-0">Control Botellones</h1>
-          <nav>
-            <Link className="me-3" to="/"><FaHome/> Casas</Link>
-            <Link className="me-3" to="/payments"><FaMoneyBillWave/> Pagos</Link>
-            <Link className="me-3" to="/inventory"><FaBoxOpen/> Inventario</Link>
-            <Link className="me-3" to="/movements"><FaBoxes/> Movimientos</Link>
-            <Link className="me-3" to="/dashboard"><FaTachometerAlt/> Dashboard</Link>
-            {user && user.role === 'admin' && (<Link className="me-3" to="/users"><FaUsers/> Usuarios</Link>)}
-            <Link className="me-3" to="/tanks">⛲ Tanques</Link>
-            {user ? (<span className="ms-2">{user.name} <button className="btn btn-sm btn-link" onClick={logout}>Salir</button></span>) : (<span className="ms-2"><Link to="/login">Entrar</Link></span>)}
-          </nav>
+      {/* 🔹 NAVBAR */}
+      <nav className="navbar navbar-expand-lg navbar-light bg-light border-bottom shadow-sm">
+        <div className="container">
+          <NavLink className="navbar-brand fw-bold" to="/">
+            💧 Control Botellones
+          </NavLink>
+
+          <button
+            className="navbar-toggler"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#mainNavbar"
+          >
+            <span className="navbar-toggler-icon"></span>
+          </button>
+
+          <div className="collapse navbar-collapse" id="mainNavbar">
+            {/* LEFT MENU */}
+            <ul className="navbar-nav me-auto mb-2 mb-lg-0">
+              <li className="nav-item">
+                <NavLink to="/" className={linkClass}>
+                  <FaHome /> Casas
+                </NavLink>
+              </li>
+
+              <li className="nav-item">
+                <NavLink to="/payments" className={linkClass}>
+                  <FaMoneyBillWave /> Pagos
+                </NavLink>
+              </li>
+
+              <li className="nav-item">
+                <NavLink to="/inventory" className={linkClass}>
+                  <FaBoxOpen /> Inventario
+                </NavLink>
+              </li>
+
+              <li className="nav-item">
+                <NavLink to="/movements" className={linkClass}>
+                  <FaBoxes /> Movimientos
+                </NavLink>
+              </li>
+
+              <li className="nav-item">
+                <NavLink to="/dashboard" className={linkClass}>
+                  <FaTachometerAlt /> Dashboard
+                </NavLink>
+              </li>
+
+              <li className="nav-item">
+                <NavLink to="/tanks" className={linkClass}>
+                  <FaWater /> Tanques
+                </NavLink>
+              </li>
+
+              {user?.role === 'admin' && (
+                <li className="nav-item">
+                  <NavLink to="/users" className={linkClass}>
+                    <FaUsers /> Usuarios
+                  </NavLink>
+                </li>
+              )}
+            </ul>
+
+            {/* RIGHT MENU */}
+            <ul className="navbar-nav ms-auto">
+              {user ? (
+                <li className="nav-item dropdown">
+                  <span
+                    className="nav-link dropdown-toggle"
+                    role="button"
+                    data-bs-toggle="dropdown"
+                  >
+                    👤 {user.name}
+                  </span>
+                  <ul className="dropdown-menu dropdown-menu-end">
+                    <li>
+                      <button className="dropdown-item text-danger" onClick={logout}>
+                        Cerrar sesión
+                      </button>
+                    </li>
+                  </ul>
+                </li>
+              ) : (
+                <li className="nav-item">
+                  <NavLink to="/login" className="btn btn-outline-primary btn-sm">
+                    Entrar
+                  </NavLink>
+                </li>
+              )}
+            </ul>
+          </div>
         </div>
-      </header>
-      <main className="container">
+      </nav>
+
+      {/* 🔹 CONTENT */}
+      <main className="container py-4">
         <Routes>
-          <Route path="/" element={<Houses/>} />
-          <Route path="/login" element={<Login/>} />
-          <Route path="/register" element={<Register/>} />
-          <Route path="/houses/:id" element={<HouseDetail/>} />
-          <Route path="/movements" element={<Movements/>} />
-          <Route path="/dashboard" element={<Dashboard/>} />
-          <Route path="/tanks" element={<TankDashboard/>} />
-          <Route path="/tanks/:id" element={<TankManagement/>} />
-          <Route path="/users" element={<Users/>} />
-          <Route path="/payments" element={<Payments/>} />
-          <Route path="/inventory" element={<Inventory/>} />
+          <Route path="/" element={<Houses />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/houses/:id" element={<HouseDetail />} />
+          <Route path="/movements" element={<Movements />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/tanks" element={<TankDashboard />} />
+          <Route path="/tanks/:id" element={<TankManagement />} />
+          <Route path="/users" element={<Users />} />
+          <Route path="/payments" element={<Payments />} />
+          <Route path="/inventory" element={<Inventory />} />
         </Routes>
       </main>
     </div>

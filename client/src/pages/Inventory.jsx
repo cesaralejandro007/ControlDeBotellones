@@ -87,104 +87,193 @@ export default function Inventory(){
   }
 
   return (
-    <div className="container mt-3">
-      <h2>Inventario</h2>
-      {lowTanks.length > 0 && (<div className="alert alert-warning">Atención: tanque(s) con nivel bajo: {lowTanks.map(t=>t.name).join(', ')}</div>)}
-      <div className="card p-3 mb-3">
-        <div className="row g-2">
-          <div className="col-md-4">
-            <label className="form-label">Nombre</label>
-            <input className="form-control" placeholder="Nombre" value={form.name} onChange={e=>setForm({...form, name:e.target.value})} />
-          </div>
-          <div className="col-md-3">
-            <label className="form-label">Categoría</label>
-            <select className="form-select" value={form.category} onChange={e=>{
-              const cat = e.target.value
-              // when selecting category, auto-set sensible unit/defaults
-              if (cat === 'Llenado Tanque') setForm({...form, category: cat, unit: 'litro', type: 'tanque'})
-              else if (cat === 'Botellones') setForm({...form, category: cat, unit: 'unidad', type: 'botellon'})
-              else setForm({...form, category: cat})
-            }}>
-              <option>Llenado Tanque</option>
-              <option>Botellones</option>
-              <option>Artículos de limpieza</option>
-            </select>
-          </div>
-          <div className="col-md-2">
-            <label className="form-label">Unidad</label>
-            <select className="form-select" value={form.unit} onChange={e=>setForm({...form, unit:e.target.value})}>
-              <option value="unidad">unidad</option>
-              <option value="kg">kg</option>
-              <option value="litro">litro</option>
-            </select>
-          </div>
-          <div className="col-md-2">
-            <label className="form-label">Cantidad</label>
-            <input className="form-control" type="number" placeholder={form.unit === 'litro' ? 'Litros' : 'Cantidad'} value={form.quantity} onChange={e=>setForm({...form, quantity:parseFloat(e.target.value)})} />
-          </div>
-          <div className="col-md-2">
-            <label className="form-label">Precio</label>
-            <input className="form-control" type="number" placeholder="Precio" value={form.price} onChange={e=>setForm({...form, price:parseFloat(e.target.value)})} />
-          </div>
-          <div className="col-md-2">
-            <label className="form-label">Capacidad (litros)</label>
-            <input className="form-control" type="number" placeholder="Capacidad" value={form.capacity} onChange={e=>setForm({...form, capacity:parseFloat(e.target.value)})} />
-          </div>
-          <div className="col-md-2 d-flex align-items-end">
-            <button className="btn btn-success w-100" onClick={submit}>Agregar</button>
-          </div>
+  <div className="container mt-4">
+
+  {/* HEADER */}
+  <div className="d-flex justify-content-between align-items-center mb-3">
+    <h5 className="mb-0 fw-semibold">Inventario</h5>
+  </div>
+
+  {/* ALERTA TANQUES BAJOS */}
+  {lowTanks.length > 0 && (
+    <div className="alert alert-warning d-flex align-items-center py-2">
+      <i className="bi bi-exclamation-triangle-fill me-2"></i>
+      <small>
+        Tanques con nivel bajo:&nbsp;
+        <strong>{lowTanks.map(t => t.name).join(", ")}</strong>
+      </small>
+    </div>
+  )}
+
+  {/* FORMULARIO */}
+  <div className="card shadow-sm border-0 mb-4">
+    <div className="card-body">
+      <h6 className="text-muted mb-3">Agregar / Actualizar producto</h6>
+
+      <div className="row g-3">
+        <div className="col-md-4">
+          <label className="form-label small text-muted">Nombre</label>
+          <input
+            className="form-control form-control-sm"
+            placeholder="Nombre del producto"
+            value={form.name}
+            onChange={e => setForm({ ...form, name: e.target.value })}
+          />
+        </div>
+
+        <div className="col-md-3">
+          <label className="form-label small text-muted">Categoría</label>
+          <select
+            className="form-select form-select-sm"
+            value={form.category}
+            onChange={e => {
+              const cat = e.target.value;
+              if (cat === "Llenado Tanque")
+                setForm({ ...form, category: cat, unit: "litro", type: "tanque" });
+              else if (cat === "Botellones")
+                setForm({ ...form, category: cat, unit: "unidad", type: "botellon" });
+              else setForm({ ...form, category: cat });
+            }}
+          >
+            <option>Llenado Tanque</option>
+            <option>Botellones</option>
+            <option>Artículos de limpieza</option>
+          </select>
+        </div>
+
+        <div className="col-md-2">
+          <label className="form-label small text-muted">Unidad</label>
+          <select
+            className="form-select form-select-sm"
+            value={form.unit}
+            onChange={e => setForm({ ...form, unit: e.target.value })}
+          >
+            <option value="unidad">Unidad</option>
+            <option value="kg">Kg</option>
+            <option value="litro">Litro</option>
+          </select>
+        </div>
+
+        <div className="col-md-3">
+          <label className="form-label small text-muted">
+            {form.unit === "litro" ? "Cantidad (litros)" : "Cantidad"}
+          </label>
+          <input
+            type="number"
+            className="form-control form-control-sm"
+            value={form.quantity}
+            onChange={e => setForm({ ...form, quantity: Number(e.target.value) })}
+          />
+        </div>
+
+        <div className="col-md-3">
+          <label className="form-label small text-muted">Precio</label>
+          <input
+            type="number"
+            className="form-control form-control-sm"
+            placeholder="$0.00"
+            value={form.price}
+            onChange={e => setForm({ ...form, price: Number(e.target.value) })}
+          />
+        </div>
+
+        <div className="col-md-3">
+          <label className="form-label small text-muted">Capacidad tanque (L)</label>
+          <input
+            type="number"
+            className="form-control form-control-sm"
+            value={form.capacity}
+            onChange={e => setForm({ ...form, capacity: Number(e.target.value) })}
+          />
+        </div>
+
+        <div className="col-md-3 d-flex align-items-end">
+          <button className="btn btn-success btn-sm w-100" onClick={submit}>
+            Guardar
+          </button>
         </div>
       </div>
-
-      <table className="table table-hover">
-        <thead>
-          <tr>
-            <th>Nombre</th>
-            <th>Tipo</th>
-            <th>Stock</th>
-            <th>Info</th>
-            <th>Precio</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map(i=> (
-            <tr key={i._id}>
-              <td>{i.name}</td>
-              <td>{i.category || i.type}</td>
-              <td>{i.quantity} {i.unit || ''}</td>
-              <td>
-                {i.unit === 'litro' ? (
-                  <div>
-                    <div>Botellones: <strong>{Math.floor(i.quantity/20)}</strong></div>
-                    {i.capacity > 0 ? (
-                      <div className="progress mt-1" style={{height: '14px'}}>
-                        {(() => {
-                          const pct = Math.min(100, Math.round((i.quantity / i.capacity) * 100))
-                          const cls = pct >= 70 ? 'bg-success' : (pct >= 30 ? 'bg-warning' : 'bg-danger')
-                            return (
-                              <>
-                                <div className={`progress-bar ${cls}`} role="progressbar" style={{width: pct + '%'}} aria-valuenow={pct} aria-valuemin="0" aria-valuemax="100">{pct}%</div>
-                                <div className="mt-1">{pct < 30 ? <span className="badge bg-danger">Bajo</span> : (pct < 70 ? <span className="badge bg-warning text-dark">Medio</span> : <span className="badge bg-success">Ok</span>)}</div>
-                              </>
-                            )
-                        })()}
-                      </div>
-                    ) : <small className="text-muted">Capacidad no definida</small>}
-                    <div className="mt-1"><a href={`/tanks?productId=${i._id}`} className="btn btn-sm btn-link">Gestionar tanque</a></div>
-                  </div>
-                ) : ('')}
-              </td>
-              <td>${i.price}</td>
-              <td>
-                <button className="btn btn-sm btn-outline-success me-2" onClick={()=>sellProduct(i)}><FaCashRegister/></button>
-                <button className="btn btn-sm btn-outline-primary me-2" onClick={()=>editProduct(i)}><FaEdit/></button>
-                <button className="btn btn-sm btn-outline-danger" onClick={()=>deleteProduct(i)}><FaTrash/></button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
+  </div>
+
+  {/* TABLA */}
+  <div className="card shadow-sm border-0">
+    <div className="card-body p-0">
+      <div className="table-responsive">
+        <table className="table table-sm table-hover align-middle mb-0">
+          <thead className="table-light">
+            <tr>
+              <th>Producto</th>
+              <th>Categoría</th>
+              <th>Stock</th>
+              <th>Estado</th>
+              <th className="text-end">Precio</th>
+              <th className="text-end">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map(i => {
+              const pct = i.capacity
+                ? Math.min(100, Math.round((i.quantity / i.capacity) * 100))
+                : null;
+
+              return (
+                <tr key={i._id}>
+                  <td className="fw-medium">{i.name}</td>
+                  <td>
+                    <span className="badge bg-secondary">
+                      {i.category || i.type}
+                    </span>
+                  </td>
+                  <td>
+                    {i.quantity} {i.unit}
+                  </td>
+                  <td>
+                    {pct !== null ? (
+                      <span
+                        className={`badge ${
+                          pct >= 70
+                            ? "bg-success"
+                            : pct >= 30
+                            ? "bg-warning text-dark"
+                            : "bg-danger"
+                        }`}
+                      >
+                        {pct}%
+                      </span>
+                    ) : (
+                      <small className="text-muted">N/A</small>
+                    )}
+                  </td>
+                  <td className="text-end">${i.price}</td>
+                  <td className="text-end">
+                    <button
+                      className="btn btn-sm btn-outline-success me-2"
+                      onClick={() => sellProduct(i)}
+                    >
+                      <FaCashRegister />
+                    </button>
+                    <button
+                      className="btn btn-sm btn-outline-primary me-2"
+                      onClick={() => editProduct(i)}
+                    >
+                      <FaEdit />
+                    </button>
+                    <button
+                      className="btn btn-sm btn-outline-danger"
+                      onClick={() => deleteProduct(i)}
+                    >
+                      <FaTrash />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
   )
 }
