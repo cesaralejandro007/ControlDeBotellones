@@ -3,6 +3,8 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import Swal from "sweetalert2";
+import Select from "react-select";
+import bancosVzla from "../utils/banksVzla";
 
 export default function Payments() {
   // --- ESTADOS ---
@@ -21,6 +23,10 @@ export default function Payments() {
     prepaidBotellones: 0,
     extraFillAmount: 0,
     description: "",
+    reference: "",
+    bank: "",
+    identification: "",
+    phone: "",
   });
 
   const { user } = useAuth();
@@ -97,8 +103,56 @@ export default function Payments() {
 
   // --- FUNCIONES DE SUBMIT / CONFIRMACIÓN ---
   const submit = async () => {
-    if (!form.house || !form.amount)
-      return Swal.fire("Faltan datos", "Selecciona casa y cantidad", "warning");
+    // 1. Casa
+    if (!form.house) {
+      return Swal.fire(
+        "Campo requerido",
+        "Debes seleccionar una casa",
+        "warning"
+      );
+    }
+
+    // 2. Referencia
+    if (!form.reference) {
+      return Swal.fire(
+        "Campo requerido",
+        "Debes ingresar la referencia",
+        "warning"
+      );
+    }
+
+    // 3. Banco
+    if (!form.bank) {
+      return Swal.fire("Campo requerido", "Debes ingresar el banco", "warning");
+    }
+
+    // 4. Cédula
+    if (!form.identification) {
+      return Swal.fire(
+        "Campo requerido",
+        "Debes ingresar la cédula",
+        "warning"
+      );
+    }
+
+    // 5. Teléfono
+    if (!form.phone) {
+      return Swal.fire(
+        "Campo requerido",
+        "Debes ingresar el teléfono",
+        "warning"
+      );
+    }
+
+    // 6. Monto
+    if (!form.amount || form.amount <= 0) {
+      return Swal.fire(
+        "Monto inválido",
+        "El monto debe ser mayor a 0",
+        "warning"
+      );
+    }
+
     try {
       await axios.post("http://localhost:4000/api/payments", form);
       setForm({
@@ -107,6 +161,10 @@ export default function Payments() {
         prepaidBotellones: 0,
         extraFillAmount: 0,
         description: "",
+        reference: "",
+        bank: "",
+        identification: "",
+        phone: "",
       });
       const [pRes, hRes] = await Promise.all([
         axios.get("http://localhost:4000/api/payments"),
@@ -121,17 +179,42 @@ export default function Payments() {
   };
 
   const toggleConfirm = async (id, current) => {
-    const result = await Swal.fire({
-      title: current ? "Anular pago?" : "Restablecer pago?",
+    if (current) {
+      return Swal.fire("Este pago ya está confirmado", "", "info");
+    }
+
+    const { value: formValues } = await Swal.fire({
+      title: "Confirmar pago",
+      html: `
+      <input id="reference" class="swal2-input" placeholder="Referencia">
+      <input id="bank" class="swal2-input" placeholder="Banco">
+      <input id="identification" class="swal2-input" placeholder="Cédula">
+      <input id="phone" class="swal2-input" placeholder="Teléfono">
+    `,
+      focusConfirm: false,
+      preConfirm: () => {
+        return {
+          reference: document.getElementById("reference").value,
+          bank: document.getElementById("bank").value,
+          identification: document.getElementById("identification").value,
+          phone: document.getElementById("phone").value,
+        };
+      },
       showCancelButton: true,
-      icon: "question",
     });
-    if (!result.isConfirmed) return;
+
+    if (!formValues) return;
+
     try {
-      await axios.put(`http://localhost:4000/api/payments/${id}/confirm`);
+      await axios.put(
+        `http://localhost:4000/api/payments/${id}/confirm`,
+        formValues
+      );
+
       const res = await axios.get("http://localhost:4000/api/payments");
       setPayments(res.data);
-      Swal.fire("OK", "Estado actualizado", "success");
+
+      Swal.fire("Confirmado", "Pago confirmado correctamente", "success");
     } catch (err) {
       Swal.fire("Error", err.response?.data?.error || err.message, "error");
     }
@@ -216,6 +299,84 @@ export default function Payments() {
                 }
                 placeholder="Opcional"
               />
+            </div>
+            {/* FILA DATOS BANCARIOS */}
+            <div className="row gx-3 gy-3 mt-3">
+              <div className="col-md-3">
+                <label className="form-label fw-semibold text-secondary">
+                  Referencia
+                </label>
+                <input
+                  type="text"
+                  className="form-control form-control-sm"
+                  value={form.reference}
+                  onChange={(e) =>
+                    setForm({ ...form, reference: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="col-md-3">
+                <label className="form-label fw-semibold text-secondary">
+                  Banco
+                </label>
+
+                <Select
+                  styles={{
+                    control: (base) => ({
+                      ...base,
+                      minHeight: "31px",
+                      height: "31px",
+                      fontSize: "0.875rem",
+                    }),
+                    valueContainer: (base) => ({
+                      ...base,
+                      padding: "0 8px",
+                    }),
+                    indicatorsContainer: (base) => ({
+                      ...base,
+                      height: "31px",
+                    }),
+                  }}
+                  options={bancosVzla}
+                  placeholder="Selecciona banco"
+                  isClearable
+                  isSearchable
+                  value={bancosVzla.find((b) => b.label === form.bank) || null}
+                  onChange={(selected) =>
+                    setForm({
+                      ...form,
+                      bank: selected ? selected.label : "",
+                    })
+                  }
+                />
+              </div>
+
+              <div className="col-md-3">
+                <label className="form-label fw-semibold text-secondary">
+                  Cédula
+                </label>
+                <input
+                  type="text"
+                  className="form-control form-control-sm"
+                  value={form.identification}
+                  onChange={(e) =>
+                    setForm({ ...form, identification: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="col-md-3">
+                <label className="form-label fw-semibold text-secondary">
+                  Teléfono
+                </label>
+                <input
+                  type="text"
+                  className="form-control form-control-sm"
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                />
+              </div>
             </div>
           </div>
 
