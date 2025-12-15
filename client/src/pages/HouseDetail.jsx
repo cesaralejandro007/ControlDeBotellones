@@ -73,10 +73,24 @@ export default function HouseDetail() {
           usedPrepaid,
         });
       }
+      let texto =
+        count === 1
+          ? `Se entrego ${count} botellon`
+          : `Se entregaron ${count} botellones`;
       await fetch();
-      Swal.fire("Entrega registrada", "", "success");
+      Swal.fire({
+        title: "Entrega registrada",
+        text: texto,
+        icon: "success",
+        confirmButtonColor: "#3085d6",
+      });
     } catch (err) {
-      Swal.fire("Error", err.response?.data?.error || err.message, "error");
+      Swal.fire({
+        title: "Error",
+        text: err.response?.data?.error || err.message,
+        icon: "error",
+        confirmButtonColor: "#3085d6",
+      });
     }
   };
 
@@ -114,10 +128,22 @@ export default function HouseDetail() {
             idempotencyKey,
           }
         );
-        Swal.fire("OK", "Pago registrado", "success");
+        Swal.fire({
+          title: "Pago registrado",
+          text: `Pago de $${formValues.amount.toFixed(
+            2
+          )} registrado correctamente.`,
+          icon: "success",
+          confirmButtonColor: "#3085d6",
+        });
         await fetch();
       } catch (err) {
-        Swal.fire("Error", err.response?.data?.error || err.message, "error");
+        Swal.fire({
+          title: "Error",
+          text: err.response?.data?.error || err.message,
+          icon: "error",
+          confirmButtonColor: "#3085d6",
+        });
       }
       return;
     }
@@ -160,6 +186,7 @@ export default function HouseDetail() {
       showLoaderOnConfirm: true,
       allowOutsideClick: false,
       showCancelButton: true,
+      confirmButtonColor: "#3085d6",
       preConfirm: () => {
         const selectedIds = pending
           .map((p) => ({
@@ -169,14 +196,19 @@ export default function HouseDetail() {
             ),
           }))
           .filter((x) => document.getElementById("pay_" + x.id).checked);
+
+        if (!selectedIds.length) {
+          Swal.showValidationMessage("Selecciona al menos una deuda a pagar");
+          return false;
+        }
+
         const total = selectedIds.reduce((s, x) => s + (x.amount || 0), 0);
+
         return { selectedIds, total };
       },
     });
+
     if (!selected) return;
-    if (!selected.selectedIds.length) {
-      return Swal.fire("Aviso", "No seleccionaste deudas", "info");
-    }
 
     let selectedBank = "";
 
@@ -195,7 +227,7 @@ export default function HouseDetail() {
     <input id="phone" class="swal2-input" placeholder="Teléfono afiliado">
   `,
       focusConfirm: false,
-
+      confirmButtonColor: "#3085d6",
       didOpen: () => {
         const container = document.getElementById("bank-select");
         const root = createRoot(container);
@@ -295,10 +327,20 @@ export default function HouseDetail() {
         }
       );
       const paymentCreated = res.data.payment;
-      Swal.fire("OK", "Pago registrado y aplicado", "success");
+      Swal.fire({
+        title: "Pago registrado",
+        text: `Pago de $${selected.total.toFixed(2)} registrado correctamente.`,
+        icon: "success",
+        confirmButtonColor: "#3085d6",
+      });
       await fetch();
     } catch (err) {
-      Swal.fire("Error", err.response?.data?.error || err.message, "error");
+      Swal.fire({
+        title: "Error",
+        text: err.response?.data?.error || err.message,
+        icon: "error",
+        confirmButtonColor: "#3085d6",
+      });
     } finally {
       setIsApplying(false);
     }
@@ -329,6 +371,7 @@ export default function HouseDetail() {
       focusConfirm: false,
       showCancelButton: true,
       confirmButtonText: "Confirmar",
+      confirmButtonColor: "#3085d6",
 
       didOpen: () => {
         const container = document.getElementById("bank-select");
@@ -412,10 +455,20 @@ export default function HouseDetail() {
         paymentData
       );
 
-      Swal.fire("OK", "Pago confirmado correctamente", "success");
+      Swal.fire({
+        title: "Pago confirmado",
+        text: "El pago ha sido confirmado correctamente.",
+        icon: "success",
+        confirmButtonColor: "#3085d6",
+      });
       await fetch();
     } catch (err) {
-      Swal.fire("Error", err.response?.data?.error || err.message, "error");
+      Swal.fire({
+        title: "Error",
+        text: err.response?.data?.error || err.message,
+        icon: "error",
+        confirmButtonColor: "#3085d6",
+      });
     }
   };
 
@@ -438,6 +491,7 @@ export default function HouseDetail() {
         </div>
       `,
       confirmButtonText: "Cerrar",
+      confirmButtonColor: "#3085d6",
     });
   };
 

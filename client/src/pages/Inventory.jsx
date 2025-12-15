@@ -22,15 +22,35 @@ export default function Inventory(){
   }, [items])
 
   const submit = async ()=>{
-    if (!form.name) return Swal.fire('Faltan datos','Nombre obligatorio','warning')
-    if (form.category === 'Llenado Tanque' && (!form.capacity || form.capacity <= 0)) return Swal.fire('Faltan datos','Capacidad (litros) obligatoria para Llenado Tanque','warning')
+    if (!form.name) return Swal.fire({
+      title: 'Faltan datos',
+      text: 'El nombre del producto es obligatorio',
+      icon: 'warning',
+      confirmButtonColor: '#3085d6'
+    })
+    if (form.category === 'Llenado Tanque' && (!form.capacity || form.capacity <= 0)) return Swal.fire({
+      title: 'Faltan datos',
+      text: 'La capacidad del tanque es obligatoria para la categoría Llenado Tanque',
+      icon: 'warning',
+      confirmButtonColor: '#3085d6'
+    })
     try{
       // enviar category y unit al backend
       await axios.post('http://localhost:4000/api/inventory', form)
       setForm({ name:'', type:'botellon', category: 'Botellones', unit: 'unidad', quantity:0, price:0, capacity:0 })
       fetch()
-      Swal.fire('Creado','Producto añadido','success')
-    }catch(err){ Swal.fire('Error', err.response?.data?.error || err.message, 'error') }
+      Swal.fire({
+        title: 'Creado',
+        text: 'Producto agregado al inventario',
+        icon: 'success',
+        confirmButtonColor: '#3085d6'
+      })
+    }catch(err){ Swal.fire({
+      title: 'Error',
+      text: err.response?.data?.error || err.message,
+      icon: 'error',
+      confirmButtonColor: '#3085d6'
+    }) }
   }
 
   const editProduct = async (p) => {
@@ -44,6 +64,7 @@ export default function Inventory(){
         `<input id="swal-price" class="swal2-input" type="number" placeholder="Precio" value="${p.price || 0}" />` +
         `<input id="swal-capacity" class="swal2-input" type="number" placeholder="Capacidad (litros)" value="${p.capacity || 0}" />`,
       focusConfirm: false,
+      confirmButtonColor: '#3085d6',
       preConfirm: () => ({
         name: document.getElementById('swal-name').value,
         category: document.getElementById('swal-category').value,
@@ -56,34 +77,70 @@ export default function Inventory(){
     if (data) {
       try{
         await axios.put(`http://localhost:4000/api/inventory/${p._id}`, data)
-        fetch(); Swal.fire('Guardado','Producto actualizado','success')
-      }catch(err){ Swal.fire('Error', err.response?.data?.error || err.message, 'error') }
+        fetch(); Swal.fire({
+          title: 'Actualizado',
+          text: 'Producto actualizado correctamente',
+          icon: 'success',
+          confirmButtonColor: '#3085d6'
+        })
+      }catch(err){ Swal.fire({
+        title: 'Error',
+        text: err.response?.data?.error || err.message,
+        icon: 'error',
+        confirmButtonColor: '#3085d6'
+      })}
     }
   }
 
   const deleteProduct = async (p) => {
-    const res = await Swal.fire({ title: 'Confirmar', text: `Eliminar ${p.name}?`, icon: 'warning', showCancelButton: true })
+    const res = await Swal.fire({ title: 'Confirmar', text: `Eliminar ${p.name}?`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: "Sí, eliminar", cancelButtonColor: '#3085d6' })
     if (res.isConfirmed) {
-      try{ await axios.delete(`http://localhost:4000/api/inventory/${p._id}`); fetch(); Swal.fire('Eliminado','Producto eliminado','success') }catch(err){ Swal.fire('Error', err.response?.data?.error || err.message, 'error') }
+      try{ await axios.delete(`http://localhost:4000/api/inventory/${p._id}`); fetch(); Swal.fire({
+        title: 'Eliminado',
+        text: 'Producto eliminado correctamente',
+        icon: 'success',
+        confirmButtonColor: '#3085d6'
+      }) }catch(err){ Swal.fire({
+        title: 'Error',
+        text: err.response?.data?.error || err.message,
+        icon: 'error',
+        confirmButtonColor: '#3085d6'
+      }) }
     }
   }
 
   const sellProduct = async (p) => {
-    if (p.unit === 'litro') return Swal.fire('Atención','Las recargas/llenados se gestionan desde el panel de tanques','info')
+    if (p.unit === 'litro') return Swal.fire({
+      title: 'No permitido',
+      text: 'Las ventas de llenado de tanques se registran automáticamente al actualizar el nivel del tanque.',
+      icon: 'info',
+      confirmButtonColor: '#3085d6'
+    })
     const { value: form } = await Swal.fire({
       title: `Vender ${p.name}`,
       html: `<input id="swal-qty" class="swal2-input" type="number" placeholder="Cantidad" value="1" />` +
             `<input id="swal-note" class="swal2-input" placeholder="Notas (opcional)" />`,
       focusConfirm: false,
+      confirmButtonColor: '#3085d6',
       preConfirm: () => ({ quantity: parseInt(document.getElementById('swal-qty').value || 0), notes: document.getElementById('swal-note').value })
     })
     if (!form) return
     try{
       const amount = (p.price || 0) * form.quantity
       await axios.post('http://localhost:4000/api/sales', { productId: p._id, quantity: form.quantity, amount, notes: form.notes })
-      Swal.fire('Venta registrada','Inventario actualizado','success')
+      Swal.fire({
+        title: 'Vendido',
+        text: `Venta registrada por $${amount}`,
+        icon: 'success',
+        confirmButtonColor: '#3085d6'
+      })
       fetch()
-    }catch(err){ Swal.fire('Error', err.response?.data?.error || err.message, 'error') }
+    }catch(err){ Swal.fire({
+      title: 'Error',
+      text: err.response?.data?.error || err.message,
+      icon: 'error',
+      confirmButtonColor: '#3085d6'
+    }) }
   }
 
   return (
@@ -188,7 +245,7 @@ export default function Inventory(){
         </div>
 
         <div className="col-md-3 d-flex align-items-end">
-          <button className="btn btn-success btn-sm w-100" onClick={submit}>
+          <button className="btn btn-primary btn-sm w-100" onClick={submit}>
             Guardar
           </button>
         </div>

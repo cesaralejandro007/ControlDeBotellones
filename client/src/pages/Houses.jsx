@@ -22,24 +22,40 @@ export default function Houses() {
       const res = await axios.get("http://localhost:4000/api/houses");
       setHouses(res.data);
     } catch (err) {
-      Swal.fire("Error", err.response?.data?.error || err.message, "error");
+      Swal.fire({
+        title: "Error",
+        text: err.response?.data?.error || err.message,
+        icon: "error",
+        confirmButtonColor: "#3085d6",
+      });
     }
   };
 
   const submit = async () => {
     if (!form.code || !form.ownerName)
-      return Swal.fire(
-        "Faltan datos",
-        "El código y el nombre son obligatorios",
-        "warning"
-      );
+      return Swal.fire({
+        title: "Faltan datos",
+        text: "El código y el nombre son obligatorios",
+        icon: "warning",
+        confirmButtonColor: "#3085d6",
+      });
     try {
       await axios.post("http://localhost:4000/api/houses", form);
       setForm({ code: "", ownerName: "", phone: "" });
       fetchHouses();
-      Swal.fire("Creado", "Casa creada correctamente", "success");
+      Swal.fire({
+        title: "Creado",
+        text: "Casa creada correctamente",
+        icon: "success",
+        confirmButtonColor: "#3085d6",
+      });
     } catch (err) {
-      Swal.fire("Error", err.response?.data?.error || err.message, "error");
+      Swal.fire({
+        title: "Error",
+        text: err.response?.data?.error || err.message,
+        icon: "error", 
+        confirmButtonColor: "#3085d6",
+      });
     }
   };
 
@@ -55,6 +71,7 @@ export default function Houses() {
           h.phone || ""
         }" />`,
       focusConfirm: false,
+      confirmButtonColor: "#3085d6",
       preConfirm: () => ({
         code: document.getElementById("swal-code").value,
         ownerName: document.getElementById("swal-owner").value,
@@ -78,14 +95,28 @@ export default function Houses() {
       text: `Eliminar ${h.code}?`,
       icon: "warning",
       showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Sí, eliminar",
+      cancelButtonText: "Cancelar",
     });
     if (res.isConfirmed) {
       try {
         await axios.delete(`http://localhost:4000/api/houses/${h._id}`);
         fetchHouses();
-        Swal.fire("Eliminado", "Casa eliminada", "success");
+        Swal.fire({
+          title: "Eliminado",
+          text: "Casa eliminada correctamente",
+          icon: "success",
+          confirmButtonColor: "#3085d6",
+        });
       } catch (err) {
-        Swal.fire("Error", err.response?.data?.error || err.message, "error");
+        Swal.fire(
+          {title: "Error",
+          text: err.response?.data?.error || err.message,
+          icon: "error",
+          confirmButtonColor: "#3085d6",}
+        );
       }
     }
   };
@@ -103,12 +134,6 @@ export default function Houses() {
     >
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h2 className="fw-bold text-secondary">Casas</h2>
-        <button
-          className="btn btn-primary shadow-sm"
-          onClick={() => document.getElementById("create-form-code")?.focus()}
-        >
-          <FaPlus /> Nuevo
-        </button>
       </div>
 
       {/* FORM CREAR */}
@@ -121,7 +146,7 @@ export default function Houses() {
             <label className="form-label text-muted">Código</label>
             <input
               id="create-form-code"
-              className="form-control border-secondary"
+              className="form-control"
               placeholder="Ej: P-19"
               value={form.code}
               onChange={(e) => setForm({ ...form, code: e.target.value })}
@@ -130,7 +155,7 @@ export default function Houses() {
           <div className="col-md-4">
             <label className="form-label text-muted">Propietario</label>
             <input
-              className="form-control border-secondary"
+              className="form-control"
               placeholder="Nombre"
               value={form.ownerName}
               onChange={(e) => setForm({ ...form, ownerName: e.target.value })}
@@ -139,7 +164,7 @@ export default function Houses() {
           <div className="col-md-3">
             <label className="form-label text-muted">Teléfono</label>
             <input
-              className="form-control border-secondary"
+              className="form-control"
               placeholder="Teléfono"
               value={form.phone}
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
@@ -147,10 +172,10 @@ export default function Houses() {
           </div>
           <div className="col-md-2 d-flex align-items-end">
             <button
-              className="btn btn-success w-100 shadow-sm"
+              className="btn btn-primary w-100 shadow-sm"
               onClick={submit}
             >
-              Crear casa
+              <FaPlus /> Crear casa
             </button>
           </div>
         </div>
@@ -158,12 +183,12 @@ export default function Houses() {
 
       {/* BUSCADOR */}
       <div className="input-group mb-3">
-        <span className="input-group-text bg-white border-secondary">
+        <span className="input-group-text bg-white">
           <FaSearch />
         </span>
         <input
           type="text"
-          className="form-control border-secondary"
+          className="form-control"
           placeholder="Buscar por código o propietario"
           value={search}
           onChange={(e) => setSearch(e.target.value)}

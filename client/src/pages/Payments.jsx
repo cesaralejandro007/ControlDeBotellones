@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import Swal from "sweetalert2";
 import Select from "react-select";
 import bancosVzla from "../utils/banksVzla";
+import { createRoot } from "react-dom/client";
 
 export default function Payments() {
   // --- ESTADOS ---
@@ -105,52 +106,62 @@ export default function Payments() {
   const submit = async () => {
     // 1. Casa
     if (!form.house) {
-      return Swal.fire(
-        "Campo requerido",
-        "Debes seleccionar una casa",
-        "warning"
-      );
+      return Swal.fire({
+        title: "Campo requerido",
+        text: "Debes seleccionar una casa",
+        icon: "warning",
+        confirmButtonColor: "#3085d6",
+      });
     }
 
     // 2. Referencia
     if (!form.reference) {
-      return Swal.fire(
-        "Campo requerido",
-        "Debes ingresar la referencia",
-        "warning"
-      );
+      return Swal.fire({
+        title: "Campo requerido",
+        text: "Debes ingresar la referencia",
+        icon: "warning",
+        confirmButtonColor: "#3085d6",
+      });
     }
 
     // 3. Banco
     if (!form.bank) {
-      return Swal.fire("Campo requerido", "Debes ingresar el banco", "warning");
+      return Swal.fire({
+        title: "Campo requerido",
+        text: "Debes seleccionar un banco",
+        icon: "warning",
+        confirmButtonColor: "#3085d6",
+      });
     }
 
     // 4. Cédula
     if (!form.identification) {
-      return Swal.fire(
-        "Campo requerido",
-        "Debes ingresar la cédula",
-        "warning"
-      );
+      return Swal.fire({
+        title: "Campo requerido",
+        text: "Debes ingresar la cédula",
+        icon: "warning",
+        confirmButtonColor: "#3085d6",
+      });
     }
 
     // 5. Teléfono
     if (!form.phone) {
-      return Swal.fire(
-        "Campo requerido",
-        "Debes ingresar el teléfono",
-        "warning"
-      );
+      return Swal.fire({
+        title: "Campo requerido",
+        text: "Debes ingresar el teléfono",
+        icon: "warning",
+        confirmButtonColor: "#3085d6",
+      });
     }
 
     // 6. Monto
     if (!form.amount || form.amount <= 0) {
-      return Swal.fire(
-        "Monto inválido",
-        "El monto debe ser mayor a 0",
-        "warning"
-      );
+      return Swal.fire({
+        title: "Monto inválido",
+        text: "El monto debe ser mayor a cero",
+        icon: "warning",
+        confirmButtonColor: "#3085d6",
+      });
     }
 
     try {
@@ -172,36 +183,128 @@ export default function Payments() {
       ]);
       setPayments(pRes.data);
       setHouses(hRes.data);
-      Swal.fire("Registrado", "Pago registrado correctamente", "success");
+      Swal.fire({
+        title: "Pago registrado",
+        text: "El pago ha sido registrado correctamente.",
+        icon: "success",
+        confirmButtonColor: "#3085d6",
+      });
     } catch (err) {
-      Swal.fire("Error", err.response?.data?.error || err.message, "error");
+      Swal.fire({
+        title: "Error",
+        text: err.response?.data?.error || err.message,
+        icon: "error",
+        confirmButtonColor: "#3085d6",
+      });
     }
   };
 
   const toggleConfirm = async (id, current) => {
     if (current) {
-      return Swal.fire("Este pago ya está confirmado", "", "info");
+      return Swal.fire({
+        title: "Este pago ya está confirmado",
+        text: "",
+        icon: "info",
+        confirmButtonColor: "#3085d6",
+      });
     }
 
-    const { value: formValues } = await Swal.fire({
-      title: "Confirmar pago",
-      html: `
-      <input id="reference" class="swal2-input" placeholder="Referencia">
-      <input id="bank" class="swal2-input" placeholder="Banco">
-      <input id="identification" class="swal2-input" placeholder="Cédula">
-      <input id="phone" class="swal2-input" placeholder="Teléfono">
-    `,
-      focusConfirm: false,
-      preConfirm: () => {
-        return {
-          reference: document.getElementById("reference").value,
-          bank: document.getElementById("bank").value,
-          identification: document.getElementById("identification").value,
-          phone: document.getElementById("phone").value,
-        };
-      },
-      showCancelButton: true,
-    });
+let selectedBank = "";
+let root;
+
+const { value: formValues } = await Swal.fire({
+  title: "Datos del pago",
+  html: `
+    <input id="ref" class="swal2-input" placeholder="Referencia">
+
+    <div
+      id="bank-select"
+      class="swal2-input"
+      style="padding:0; width:70%; margin:4px auto 8px auto;"
+    ></div>
+
+    <input id="identification" class="swal2-input" placeholder="Cédula / ID">
+    <input id="phone" class="swal2-input" placeholder="Teléfono afiliado">
+  `,
+  focusConfirm: false,
+  confirmButtonColor: "#3085d6",
+
+  didOpen: () => {
+    const container = document.getElementById("bank-select");
+    root = createRoot(container);
+
+    root.render(
+      <Select
+        options={bancosVzla}
+        placeholder="Selecciona banco"
+        isSearchable
+        isClearable
+        styles={{
+              control: (base) => ({
+                ...base,
+                border: "1px solid #d9d9d9",
+                boxShadow: "none",
+                minHeight: "50px",
+                height: "50px",
+                borderRadius: "4px",
+              }),
+              valueContainer: (base) => ({
+                ...base,
+                justifyContent: "center",
+                padding: "0 12px",
+              }),
+              placeholder: (base) => ({
+                ...base,
+                textAlign: "center",
+                width: "100%",
+                color: "#aaa",
+              }),
+              singleValue: (base) => ({
+                ...base,
+                textAlign: "center",
+                width: "100%",
+              }),
+              indicatorsContainer: (base) => ({
+                ...base,
+                height: "50px",
+              }),
+              indicatorSeparator: () => ({
+                display: "none",
+              }),
+              menu: (base) => ({
+                ...base,
+                zIndex: 9999,
+              }),
+            }}
+        onChange={(selected) => {
+          selectedBank = selected ? selected.label : "";
+        }}
+      />
+    );
+  },
+
+  willClose: () => {
+    if (root) root.unmount();
+  },
+
+  preConfirm: () => {
+    const reference = document.getElementById("ref").value;
+    const identification = document.getElementById("identification").value;
+    const phone = document.getElementById("phone").value;
+
+    if (!reference || !selectedBank || !identification || !phone) {
+      Swal.showValidationMessage("Todos los campos son obligatorios");
+      return false; // ⛔ evita cierre
+    }
+
+    return {
+      reference,
+      bank: selectedBank,
+      identification,
+      phone,
+    };
+  },
+});
 
     if (!formValues) return;
 
@@ -214,9 +317,19 @@ export default function Payments() {
       const res = await axios.get("http://localhost:4000/api/payments");
       setPayments(res.data);
 
-      Swal.fire("Confirmado", "Pago confirmado correctamente", "success");
+      Swal.fire({
+        title: "Pago confirmado",
+        text: "El pago ha sido confirmado correctamente.",
+        icon: "success",
+        confirmButtonColor: "#3085d6",
+      });
     } catch (err) {
-      Swal.fire("Error", err.response?.data?.error || err.message, "error");
+      Swal.fire({
+        title: "Error",
+        text: err.response?.data?.error || err.message,
+        icon: "error",
+        confirmButtonColor: "#3085d6",
+      });
     }
   };
 
