@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import axios from 'axios'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { FaEnvelope, FaLock, FaSignInAlt } from 'react-icons/fa'
+import { FaEnvelope, FaTint, FaSignInAlt, FaLock } from 'react-icons/fa'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -36,11 +36,11 @@ export default function Login() {
   return (
     <div className="container min-vh-100 d-flex align-items-center justify-content-center">
       <div className="col-12 col-md-5 col-lg-4">
-        <div className="card shadow-lg border-0">
+        <div className="card shadow-lg border-0 rounded-3">
           <div className="card-body p-4">
-            <h3 className="text-center fw-bold mb-4">
-              🔐 Iniciar sesión
-            </h3>
+            <h4 className="text-center fw-bold mb-4 text-primary">
+              <FaTint className="me-2" /> Control de Botellones
+            </h4>
 
             {error && (
               <div className="alert alert-danger py-2 text-center">
@@ -50,14 +50,14 @@ export default function Login() {
 
             <form onSubmit={submit}>
               <div className="mb-3">
-                <label className="form-label">Correo electrónico</label>
+                <label className="form-label fw-semibold">Correo electrónico</label>
                 <div className="input-group">
-                  <span className="input-group-text">
+                  <span className="input-group-text text-primary bg-light border-primary">
                     <FaEnvelope />
                   </span>
                   <input
                     type="email"
-                    className="form-control"
+                    className="form-control border-primary"
                     placeholder="usuario@email.com"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
@@ -67,14 +67,14 @@ export default function Login() {
               </div>
 
               <div className="mb-4">
-                <label className="form-label">Contraseña</label>
+                <label className="form-label fw-semibold">Contraseña</label>
                 <div className="input-group">
-                  <span className="input-group-text">
+                  <span className="input-group-text text-primary bg-light border-primary">
                     <FaLock />
                   </span>
                   <input
                     type="password"
-                    className="form-control"
+                    className="form-control border-primary"
                     placeholder="••••••••"
                     value={password}
                     onChange={e => setPassword(e.target.value)}
@@ -97,7 +97,7 @@ export default function Login() {
             <div className="text-center mt-4">
               <small>
                 ¿No tienes cuenta?{' '}
-                <Link to="/register" className="fw-semibold">
+                <Link to="/register" className="fw-semibold text-primary">
                   Regístrate
                 </Link>
               </small>

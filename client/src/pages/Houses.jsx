@@ -82,9 +82,19 @@ export default function Houses() {
       try {
         await axios.put(`http://localhost:4000/api/houses/${h._id}`, data);
         fetchHouses();
-        Swal.fire("Guardado", "Casa actualizada", "success");
+        Swal.fire({
+          title: "Cambios guardados",
+          text: "Se han guardado los cambios realizados.",
+          icon: "success", 
+          confirmButtonColor: "#3085d6",
+        });
       } catch (err) {
-        Swal.fire("Error", err.response?.data?.error || err.message, "error");
+        Swal.fire({
+          title: "Error",
+          text: err.response?.data?.error || err.message,
+          icon: "error",
+          confirmButtonColor: "#3085d6",
+        });
       }
     }
   };
@@ -130,10 +140,9 @@ export default function Houses() {
   return (
     <div
       className="container mt-4"
-      style={{ backgroundColor: "#f8f9fa", minHeight: "90vh" }}
     >
       <div className="d-flex justify-content-between align-items-center mb-3">
-        <h2 className="fw-bold text-secondary">Casas</h2>
+        <h4>Casas</h4>
       </div>
 
       {/* FORM CREAR */}
@@ -182,85 +191,83 @@ export default function Houses() {
       </div>
 
       {/* BUSCADOR */}
-      <div className="input-group mb-3">
-        <span className="input-group-text bg-white">
-          <FaSearch />
-        </span>
-        <input
-          type="text"
-          className="form-control"
-          placeholder="Buscar por código o propietario"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
 
       {/* TABLA */}
-      <div className="table-responsive">
-        <table
-          className="table align-middle"
-          style={{ backgroundColor: "#ffffff", borderRadius: "6px" }}
-        >
-          <thead style={{ backgroundColor: "#e9ecef", color: "#495057" }}>
-            <tr>
-              <th>Código</th>
-              <th>Propietario</th>
-              <th>Teléfono</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredHouses.length ? (
-              filteredHouses.map((h) => (
-                <tr
-                  key={h._id}
-                  className="align-middle"
-                  style={{ transition: "0.2s", cursor: "pointer" }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.backgroundColor = "#f1f3f5")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.backgroundColor = "#ffffff")
-                  }
-                >
-                  <td>
-                    <Link
-                      to={`/houses/${h._id}`}
-                      className="fw-semibold text-dark"
-                    >
-                      {h.code}
-                    </Link>
-                  </td>
-                  <td>{h.ownerName}</td>
-                  <td>{h.phone}</td>
-                  <td>
-                    <button
-                      className="btn btn-sm btn-outline-primary me-2"
-                      onClick={() => editHouse(h)}
-                    >
-                      {" "}
-                      <FaEdit />{" "}
-                    </button>
-                    <button
-                      className="btn btn-sm btn-outline-danger"
-                      onClick={() => deleteHouse(h)}
-                    >
-                      {" "}
-                      <FaTrash />{" "}
-                    </button>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="4" className="text-center text-muted">
-                  No se encontraron casas
+      <div className="card shadow-sm mb-4 border-0">
+  <div className="card-body p-3">
+
+    {/* 🔍 BUSCADOR */}
+    <div className="input-group mb-3">
+      <span className="input-group-text bg-white border-end-0">
+        <FaSearch className="text-muted" />
+      </span>
+      <input
+        type="text"
+        className="form-control border-start-0"
+        placeholder="Buscar por código o propietario"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+    </div>
+
+    {/* 📋 TABLA */}
+    <div className="table-responsive">
+      <table className="table table-hover align-middle mb-0">
+        <thead className="table-light">
+          <tr>
+            <th>Código</th>
+            <th>Propietario</th>
+            <th>Teléfono</th>
+            <th className="text-end">Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {filteredHouses.length ? (
+            filteredHouses.map((h) => (
+              <tr key={h._id}>
+                <td>
+                  <Link
+                    to={`/houses/${h._id}`}
+                    className="fw-semibold text-dark"
+                  >
+                    {h.code}
+                  </Link>
+                </td>
+                <td>{h.ownerName}</td>
+                <td>{h.phone}</td>
+                <td className="text-end">
+                  <button
+                    className="btn btn-sm btn-outline-primary me-2"
+                    onClick={() => editHouse(h)}
+                    title="Editar"
+                  >
+                    <FaEdit />
+                  </button>
+                  <button
+                    className="btn btn-sm btn-outline-danger"
+                    onClick={() => deleteHouse(h)}
+                    title="Eliminar"
+                  >
+                    <FaTrash />
+                  </button>
                 </td>
               </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+            ))
+          ) : (
+            <tr>
+              <td colSpan="4" className="text-center text-muted py-4">
+                No se encontraron casas
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
     </div>
   );
 }

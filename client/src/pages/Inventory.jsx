@@ -148,7 +148,7 @@ export default function Inventory(){
 
   {/* HEADER */}
   <div className="d-flex justify-content-between align-items-center mb-3">
-    <h5 className="mb-0 fw-semibold">Inventario</h5>
+    <h4 className="mb-0 fw-semibold">Inventario</h4>
   </div>
 
   {/* ALERTA TANQUES BAJOS */}

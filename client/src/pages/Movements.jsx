@@ -34,7 +34,7 @@ export default function Movements(){
 
   return (
     <div className="container mt-3">
-      <h2>Movimientos de Inventario</h2>
+      <h4>Movimientos de Inventario</h4>
       <div className="mb-3">
         <select className="form-select" value={form.product} onChange={e=>{ setForm({...form, product:e.target.value}); const p = products.find(x=> x._id === e.target.value); setSelectedProduct(p || null) }}>
           <option value="">Selecciona producto</option>
@@ -51,7 +51,7 @@ export default function Movements(){
         </div>
       </div>
 
-      <h3>Últimos movimientos</h3>
+      <h5>Últimos movimientos</h5>
       <ul className="list-group">
         {movements.map(m=> (
           <li key={m._id} className="list-group-item">

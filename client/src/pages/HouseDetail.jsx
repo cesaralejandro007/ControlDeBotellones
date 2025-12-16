@@ -6,6 +6,7 @@ import Swal from "sweetalert2";
 import Select from "react-select";
 import bancosVzla from "../utils/banksVzla";
 import { createRoot } from "react-dom/client";
+import { FaInfoCircle } from "react-icons/fa";
 
 export default function HouseDetail() {
   const { id } = useParams();
@@ -94,6 +95,14 @@ export default function HouseDetail() {
     }
   };
 
+  function updateTotal() {
+    const total = Array.from(
+      document.querySelectorAll("[data-checkbox-pay]:checked")
+    ).reduce((sum, cb) => sum + parseFloat(cb.dataset.amount || 0), 0);
+
+    document.getElementById("total_pay").innerText = total.toFixed(2);
+  }
+
   const payDebt = async () => {
     // If there are no pending payments, open the quick pay dialog
     const pending = debtInfo?.pendingPayments || [];
@@ -164,21 +173,32 @@ export default function HouseDetail() {
       )
       .join("");
     const tableHtml = `
-      <div style="text-align:left">
-        <table class="table table-sm table-striped">
-          <thead>
-            <tr>
-              <th style="width: 40px"><input id="select_all_pay" class="form-check-input" type="checkbox" checked onchange="document.querySelectorAll('[data-checkbox-pay]').forEach(cb => cb.checked = this.checked)"></th>
-              <th>Fecha</th>
-              <th>Monto</th>
-              <th>Descripción</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows}
-          </tbody>
-        </table>
-      </div>`;
+    <div style="text-align:left">
+      <table class="table table-sm table-striped">
+        <thead>
+          <tr>
+            <th style="width: 40px">
+              <input 
+                id="select_all_pay" 
+                class="form-check-input" 
+                type="checkbox" 
+                checked
+              >
+            </th>
+            <th>Fecha</th>
+            <th>Monto</th>
+            <th>Descripción</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
+      <div class="fw-bold">
+        Total: $<span id="total_pay">0</span>
+      </div>
+    </div>`;
+
     const { value: selected } = await Swal.fire({
       title: "Seleccionar deudas a pagar",
       html: tableHtml,
@@ -187,6 +207,26 @@ export default function HouseDetail() {
       allowOutsideClick: false,
       showCancelButton: true,
       confirmButtonColor: "#3085d6",
+
+      didOpen: () => {
+        // Checkboxes individuales
+        document
+          .querySelectorAll("[data-checkbox-pay]")
+          .forEach((cb) => cb.addEventListener("change", updateTotal));
+
+        // Select all
+        const selectAll = document.getElementById("select_all_pay");
+        selectAll.addEventListener("change", function () {
+          document
+            .querySelectorAll("[data-checkbox-pay]")
+            .forEach((cb) => (cb.checked = this.checked));
+          updateTotal();
+        });
+
+        // Total inicial
+        updateTotal();
+      },
+
       preConfirm: () => {
         const selectedIds = pending
           .map((p) => ({
@@ -869,12 +909,13 @@ export default function HouseDetail() {
                           <td className="text-center">
                             <div className="d-flex justify-content-center gap-1">
                               <button
-                                className="btn btn-sm btn-outline-info"
+                                className="btn btn-sm btn-outline-info me-1"
                                 title="Ver detalles"
                                 onClick={() => showPaymentDetails(p)}
                               >
-                                ℹ️
+                                <FaInfoCircle />
                               </button>
+
 
                               {!isConfirmed && user?.role === "admin" && (
                                 <button
