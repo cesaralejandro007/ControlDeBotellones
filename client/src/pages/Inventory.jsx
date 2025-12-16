@@ -213,7 +213,7 @@ export default function Inventory(){
 
         <div className="col-md-3">
           <label className="form-label small text-muted">
-            {form.unit === "litro" ? "Cantidad (litros)" : "Cantidad"}
+            {form.unit === "litro" ? "Cantidad a llenar (litros)" : "Cantidad"}
           </label>
           <input
             type="number"
@@ -224,7 +224,7 @@ export default function Inventory(){
         </div>
 
         <div className="col-md-3">
-          <label className="form-label small text-muted">Precio</label>
+          <label className="form-label small text-muted">Precio por vacios (botellones)</label>
           <input
             type="number"
             className="form-control form-control-sm"
