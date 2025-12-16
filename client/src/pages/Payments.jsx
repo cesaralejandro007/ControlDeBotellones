@@ -209,12 +209,12 @@ export default function Payments() {
       });
     }
 
-let selectedBank = "";
-let root;
+    let selectedBank = "";
+    let root;
 
-const { value: formValues } = await Swal.fire({
-  title: "Datos del pago",
-  html: `
+    const { value: formValues } = await Swal.fire({
+      title: "Datos del pago",
+      html: `
     <input id="ref" class="swal2-input" placeholder="Referencia">
 
     <div
@@ -226,20 +226,20 @@ const { value: formValues } = await Swal.fire({
     <input id="identification" class="swal2-input" placeholder="Cédula / ID">
     <input id="phone" class="swal2-input" placeholder="Teléfono afiliado">
   `,
-  focusConfirm: false,
-  confirmButtonColor: "#3085d6",
+      focusConfirm: false,
+      confirmButtonColor: "#3085d6",
 
-  didOpen: () => {
-    const container = document.getElementById("bank-select");
-    root = createRoot(container);
+      didOpen: () => {
+        const container = document.getElementById("bank-select");
+        root = createRoot(container);
 
-    root.render(
-      <Select
-        options={bancosVzla}
-        placeholder="Selecciona banco"
-        isSearchable
-        isClearable
-        styles={{
+        root.render(
+          <Select
+            options={bancosVzla}
+            placeholder="Selecciona banco"
+            isSearchable
+            isClearable
+            styles={{
               control: (base) => ({
                 ...base,
                 border: "1px solid #d9d9d9",
@@ -276,35 +276,35 @@ const { value: formValues } = await Swal.fire({
                 zIndex: 9999,
               }),
             }}
-        onChange={(selected) => {
-          selectedBank = selected ? selected.label : "";
-        }}
-      />
-    );
-  },
+            onChange={(selected) => {
+              selectedBank = selected ? selected.label : "";
+            }}
+          />
+        );
+      },
 
-  willClose: () => {
-    if (root) root.unmount();
-  },
+      willClose: () => {
+        if (root) root.unmount();
+      },
 
-  preConfirm: () => {
-    const reference = document.getElementById("ref").value;
-    const identification = document.getElementById("identification").value;
-    const phone = document.getElementById("phone").value;
+      preConfirm: () => {
+        const reference = document.getElementById("ref").value;
+        const identification = document.getElementById("identification").value;
+        const phone = document.getElementById("phone").value;
 
-    if (!reference || !selectedBank || !identification || !phone) {
-      Swal.showValidationMessage("Todos los campos son obligatorios");
-      return false; // ⛔ evita cierre
-    }
+        if (!reference || !selectedBank || !identification || !phone) {
+          Swal.showValidationMessage("Todos los campos son obligatorios");
+          return false; // ⛔ evita cierre
+        }
 
-    return {
-      reference,
-      bank: selectedBank,
-      identification,
-      phone,
-    };
-  },
-});
+        return {
+          reference,
+          bank: selectedBank,
+          identification,
+          phone,
+        };
+      },
+    });
 
     if (!formValues) return;
 
@@ -385,18 +385,39 @@ const { value: formValues } = await Swal.fire({
               <label className="form-label fw-semibold text-secondary">
                 Casa
               </label>
-              <select
-                className="form-select form-select-sm"
-                value={form.house}
-                onChange={(e) => setForm({ ...form, house: e.target.value })}
-              >
-                <option value="">Selecciona casa</option>
-                {houses.map((h) => (
-                  <option key={h._id} value={h._id}>
-                    {h.code}
-                  </option>
-                ))}
-              </select>
+              <Select
+                styles={{
+                  control: (base) => ({
+                    ...base,
+                    minHeight: "31px",
+                    height: "31px",
+                    fontSize: "0.875rem",
+                  }),
+                  valueContainer: (base) => ({
+                    ...base,
+                    padding: "0 8px",
+                  }),
+                  indicatorsContainer: (base) => ({
+                    ...base,
+                    height: "31px",
+                  }),
+                }}
+                options={houses.map((h) => ({ value: h._id, label: h.code }))} // adaptamos el formato
+                placeholder="Selecciona casa"
+                isClearable
+                isSearchable
+                value={
+                  houses
+                    .map((h) => ({ value: h._id, label: h.code }))
+                    .find((h) => h.value === form.house) || null
+                }
+                onChange={(selected) =>
+                  setForm({
+                    ...form,
+                    house: selected ? selected.value : "",
+                  })
+                }
+              />
             </div>
 
             <div className="col-md-6 d-flex flex-column">

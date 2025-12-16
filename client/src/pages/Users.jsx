@@ -63,7 +63,7 @@ export default function Users(){
               <td>{u.email}</td>
               <td>{u.role}</td>
               <td>
-                <button className="btn btn-sm btn-outline-primary me-2" onClick={()=>changeRole(u._id, u.role === 'admin' ? 'user' : 'admin')}>{u.role === 'admin' ? 'Demote' : 'Promote'}</button>
+                <button className="btn btn-sm btn-outline-primary me-2" onClick={()=>changeRole(u._id, u.role === 'admin' ? 'user' : 'admin')}>{u.role === 'admin' ? 'Degenerar' : 'Promover'}</button>
                 <button className="btn btn-sm btn-outline-danger" onClick={()=>deleteUser(u._id)}>Eliminar</button>
               </td>
             </tr>
