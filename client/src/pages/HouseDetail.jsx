@@ -35,11 +35,12 @@ export default function HouseDetail() {
       const bot = inv.data.find((i) => i.type === "botellon");
       setBotellonStock(bot ? bot.quantity : null);
       // get tank summary to read pricePerFill
-      const tanks = await axios.get(
-        "http://localhost:4000/api/inventory/tanks/summary"
-      );
-      const tank = tanks.data[0];
-      setTankInfo(tank || null);
+      try {
+        const active = await axios.get("http://localhost:4000/api/inventory/tanks/active");
+        setTankInfo(active.data || null);
+      } catch (e) {
+        setTankInfo(null);
+      }
     } catch (e) {
       setBotellonStock(null);
       setTankInfo(null);
@@ -58,42 +59,54 @@ export default function HouseDetail() {
     else fetch();
   }, [id, user]);
 
-  const addDelivery = async (usedPrepaid = false) => {
-    try {
-      const count = parseInt(deliveryCount) || 1;
-      if (tankInfo && tankInfo.id) {
-        // use tank module to fill directly
-        await axios.post(
-          `http://localhost:4000/api/inventory/tanks/${tankInfo.id}/fill`,
-          { house: id, count, usedPrepaid }
-        );
-      } else {
-        await axios.post("http://localhost:4000/api/deliveries", {
-          house: id,
-          count,
-          usedPrepaid,
-        });
-      }
-      let texto =
-        count === 1
-          ? `Se entrego ${count} botellon`
-          : `Se entregaron ${count} botellones`;
-      await fetch();
-      Swal.fire({
-        title: "Entrega registrada",
-        text: texto,
-        icon: "success",
-        confirmButtonColor: "#3085d6",
-      });
-    } catch (err) {
-      Swal.fire({
-        title: "Error",
-        text: err.response?.data?.error || err.message,
-        icon: "error",
-        confirmButtonColor: "#3085d6",
+const addDelivery = async (usedPrepaid = false) => {
+  try {
+    const count = parseInt(deliveryCount) || 1;
+
+    // actualizar tankInfo antes de enviar
+    let tank = tankInfo;
+    if (tankInfo?.id) {
+      const activeRes = await axios.get(
+        "http://localhost:4000/api/inventory/tanks/active"
+      );
+      tank = activeRes.data;
+      setTankInfo(tank); // opcional: actualizar estado para UI
+    }
+
+    if (tank && tank.id) {
+      // enviar con precio actualizado
+      await axios.post(
+        `http://localhost:4000/api/inventory/tanks/${tank.id}/fill`,
+        { house: id, count, usedPrepaid, pricePerFill: tank.pricePerFill }
+      );
+    } else {
+      await axios.post("http://localhost:4000/api/deliveries", {
+        house: id,
+        count,
+        usedPrepaid,
       });
     }
-  };
+
+    let texto =
+      count === 1
+        ? `Se entregó ${count} botellón`
+        : `Se entregaron ${count} botellones`;
+    await fetch();
+    Swal.fire({
+      title: "Entrega registrada",
+      text: texto,
+      icon: "success",
+      confirmButtonColor: "#3085d6",
+    });
+  } catch (err) {
+    Swal.fire({
+      title: "Error",
+      text: err.response?.data?.error || err.message,
+      icon: "error",
+      confirmButtonColor: "#3085d6",
+    });
+  }
+};
 
   function updateTotal() {
     const total = Array.from(

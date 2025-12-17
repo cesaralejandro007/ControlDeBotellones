@@ -14,7 +14,7 @@ router.get('/summary', auth, async (req, res) => {
   try{
     const days = Math.max(7, parseInt(req.query.days) || 30)
     // join Tank documents to get pricePerFill, litersPerBottle
-    const tanks = await Tank.find().populate('product')
+    const tanks = await Tank.find({ active: true }).populate('product')
     const since = new Date(); since.setDate(since.getDate() - days)
 
     const results = await Promise.all(tanks.map(async t => {
@@ -95,15 +95,49 @@ router.post('/:tankId/recharge', auth, isAdmin, async (req, res) => {
 
 // Fill bottles from tank: consumes liters and optionally creates a Sale/Payment
 router.post('/:tankId/fill', auth, isAdmin, async (req, res) => {
-  try{
-    const t = await Tank.findById(req.params.tankId).populate('product')
-    if (!t) return res.status(404).json({ error: 'Tanque no encontrado' })
+  try {
     const { count = 1, house, usedPrepaid = false, notes } = req.body
-    const { consumeFromTank } = require('../utils/tankOperations')
-    const result = await consumeFromTank({ tankId: req.params.tankId, count, house, usedPrepaid, notes, userId: req.user.id, createDelivery: true })
-    res.json({ tank: result.tankEntry, product: result.product, movement: result.movement, payment: result.payment, litersUsed: result.litersNeeded })
-  }catch(err){ res.status(400).json({ error: err.message }) }
+
+    const { consumeFromTanksFIFO } = require('../utils/tankOperations')
+
+    const result = await consumeFromTanksFIFO({
+      count,
+      house,
+      usedPrepaid,
+      notes,
+      userId: req.user.id,
+      createDelivery: true
+    })
+
+    res.json({
+      message: 'Llenado registrado correctamente',
+      litersUsed: result.litersUsed,
+      movements: result.movements,
+      payment: result.payment,
+      delivery: result.delivery
+    })
+  } catch (err) {
+    res.status(400).json({ error: err.message })
+  }
 })
+
+// DESACTIVAR TANQUE (admin)
+router.put('/:tankId/deactivate', auth, isAdmin, async (req, res) => {
+  const tank = await Tank.findById(req.params.tankId)
+  if (!tank) return res.status(404).json({ error: 'Tanque no encontrado' })
+
+  const movements = await InventoryMovement.exists({ product: tank.product })
+  if (movements) {
+    tank.active = false
+    await tank.save()
+    return res.json({ message: 'Tanque desactivado (tiene historial)' })
+  }
+
+  tank.active = false
+  await tank.save()
+  res.json({ message: 'Tanque desactivado correctamente' })
+})
+
 
 module.exports = router
 

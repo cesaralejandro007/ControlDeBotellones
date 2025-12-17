@@ -38,10 +38,13 @@ router.post('/', auth, isAdmin, async (req, res) => {
 
     // Buscar producto botellón para precio y tanque (producto en litros) para descontar agua
     const botellonProduct = await Product.findOne({ type: 'botellon' });
-    const tankProduct = await Product.findOne({ unit: 'litro' });
-    // find Tank model to get pricePerFill instead of botellon price
+
+    // 👇 ahora se obtiene el tanque ACTIVO realmente
+    const tankProduct = await Product.findOne({ unit: 'litro', isActive: true });
+
     const Tank = require('../models/Tank')
     const tankModel = tankProduct ? await Tank.findOne({ product: tankProduct._id }) : null
+
 
     // Si no existe tanque, no se puede realizar la entrega (a menos que se use anticipo y admin decida otra cosa)
     if (!tankProduct) return res.status(400).json({ error: 'Tanque de agua no está registrado en inventario' });
@@ -54,8 +57,8 @@ router.post('/', auth, isAdmin, async (req, res) => {
     // If we have a tankEntry, prefer to let the tankOperations helper create the delivery and manage movement/payment
     if (tankModel){
       try{
-        const { consumeFromTank } = require('../utils/tankOperations')
-        const result = await consumeFromTank({ productId: tankProduct._id, count, house, usedPrepaid, notes: `Entrega a casa ${house} (${count} botellones)`, userId: req.user.id, createDelivery: true })
+        const { consumeFromTanksFIFO } = require('../utils/tankOperations')
+        const result = await consumeFromTanksFIFO({ productId: tankProduct._id, count, house, usedPrepaid, notes: `Entrega a casa ${house} (${count} botellones)`, userId: req.user.id, createDelivery: true })
         return res.json({ delivery: result.delivery || null, product: botellonProduct, litersUsed: result.litersNeeded, pricePerFillUsed: tankModel?.pricePerFill || botellonProduct?.price, litersPerBottle: tankModel?.litersPerBottle || 20 })
       }catch(e){ return res.status(400).json({ error: e.message }) }
     }

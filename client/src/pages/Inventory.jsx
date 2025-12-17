@@ -92,22 +92,57 @@ export default function Inventory(){
     }
   }
 
-  const deleteProduct = async (p) => {
-    const res = await Swal.fire({ title: 'Confirmar', text: `Eliminar ${p.name}?`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: "Sí, eliminar", cancelButtonColor: '#3085d6' })
-    if (res.isConfirmed) {
-      try{ await axios.delete(`http://localhost:4000/api/inventory/${p._id}`); fetch(); Swal.fire({
+const deleteProduct = async (p) => {
+
+  // bloquear eliminación de tanque activo
+  if (p.type === 'tanque' && p.isActive) {
+    return Swal.fire({
+      icon: 'warning',
+      title: 'No permitido',
+      text: 'No puedes eliminar el tanque activo. Activa otro tanque primero.'
+    });
+  }
+
+  const res = await Swal.fire({
+    title: 'Confirmar',
+    text: `¿Eliminar / desactivar ${p.name}?`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    confirmButtonText: "Sí, continuar",
+    cancelButtonColor: '#3085d6'
+  });
+
+  if (!res.isConfirmed) return;
+
+  try {
+    const response = await axios.delete(`http://localhost:4000/api/inventory/${p._id}`);
+
+    if (response.data.disabled) {
+      Swal.fire({
+        title: 'Desactivado',
+        text: 'Tanque desactivado correctamente',
+        icon: 'success',
+      });
+    } else {
+      Swal.fire({
         title: 'Eliminado',
         text: 'Producto eliminado correctamente',
         icon: 'success',
-        confirmButtonColor: '#3085d6'
-      }) }catch(err){ Swal.fire({
-        title: 'Error',
-        text: err.response?.data?.error || err.message,
-        icon: 'error',
-        confirmButtonColor: '#3085d6'
-      }) }
+      });
     }
+
+    fetch();
+
+  } catch (err) {
+    Swal.fire({
+      title: 'Error',
+      text: err.response?.data?.error || err.message,
+      icon: 'error'
+    });
   }
+}
+
 
   const sellProduct = async (p) => {
     if (p.unit === 'litro') return Swal.fire({
@@ -276,7 +311,11 @@ export default function Inventory(){
 
               return (
                 <tr key={i._id}>
-                  <td className="fw-medium">{i.name}</td>
+                  <td className="fw-medium">
+                    {i.name} {i.isActive && i.type === 'tanque' && (
+                      <span className="badge bg-info ms-2">Activo</span>
+                    )}
+                  </td>
                   <td>
                     <span className="badge bg-secondary">
                       {i.category || i.type}
@@ -303,26 +342,48 @@ export default function Inventory(){
                     )}
                   </td>
                   <td className="text-end">${i.price}</td>
-                  <td className="text-end">
-                    <button
-                      className="btn btn-sm btn-outline-success me-2"
-                      onClick={() => sellProduct(i)}
-                    >
-                      <FaCashRegister />
-                    </button>
-                    <button
-                      className="btn btn-sm btn-outline-primary me-2"
-                      onClick={() => editProduct(i)}
-                    >
-                      <FaEdit />
-                    </button>
-                    <button
-                      className="btn btn-sm btn-outline-danger"
-                      onClick={() => deleteProduct(i)}
-                    >
-                      <FaTrash />
-                    </button>
-                  </td>
+<td className="text-end">
+
+  {/* VENTAS */}
+  <button
+    className="btn btn-sm btn-outline-success me-2"
+    onClick={() => sellProduct(i)}
+  >
+    <FaCashRegister />
+  </button>
+
+  {/* EDITAR */}
+  <button
+    className="btn btn-sm btn-outline-primary me-2"
+    onClick={() => editProduct(i)}
+  >
+    <FaEdit />
+  </button>
+
+  {/* ACTIVAR TANQUE */}
+  {i.type === 'tanque' && !i.isActive && (
+    <button
+      className="btn btn-sm btn-outline-info me-2"
+      onClick={async () => {
+        await axios.put(`http://localhost:4000/api/inventory/tanks/activate/${i._id}`)
+        Swal.fire('Activado', 'Tanque activado correctamente', 'success')
+        fetch()
+      }}
+    >
+      Activar
+    </button>
+  )}
+
+  {/* ELIMINAR / DESACTIVAR */}
+  <button
+    className="btn btn-sm btn-outline-danger"
+    onClick={() => deleteProduct(i)}
+  >
+    <FaTrash />
+  </button>
+
+</td>
+
                 </tr>
               );
             })}
