@@ -14,35 +14,61 @@ router.get('/', auth, async (req, res) => {
 });
 
 
-router.get('/tanks/active', auth, async (req, res) => {
-  const activeProduct = await Product.findOne({ type: 'tanque', isActive: true });
-  if (!activeProduct) return res.json(null);
+router.get('/tanks/active', async (req, res) => {
+  const tank = await Tank.findOne({ active: true }).populate('product');
 
-  const tank = await Tank.findOne({ product: activeProduct._id });
+  if (!tank) return res.json(null);
 
   res.json({
-    id: activeProduct._id,
-    name: activeProduct.name,
-    type: activeProduct.type,
-    quantity: activeProduct.quantity,
-    capacity: activeProduct.capacity,
-    pricePerFill: tank?.pricePerFill || 0,
-    litersPerBottle: tank?.litersPerBottle || 20
+    id: tank.product._id,
+    name: tank.product.name,
+    quantity: tank.product.quantity,
+    capacity: tank.product.capacity,
+    litersPerBottle: tank.litersPerBottle,
+    pricePerFill: tank.pricePerFill
   });
 });
 
+
+
 // activar tanque
-router.put('/tanks/activate/:id', auth, isAdmin, async (req, res) => {
-  const id = req.params.id;
+// 🔁 Activar tanque (desactiva los demás)
+router.put('/tanks/activate/:id', async (req, res) => {
+  try {
+    // 1️⃣ Desactivar TODOS los tanques
+    await Tank.updateMany({}, { active: false });
 
-  // desactivar todos
-  await Product.updateMany({ type: 'tanque' }, { isActive: false });
+    // 2️⃣ Activar el seleccionado
+    const tank = await Tank.findOneAndUpdate(
+      { product: req.params.id },
+      { active: true },
+      { new: true }
+    ).populate('product');
 
-  // activar seleccionado
-  await Product.findByIdAndUpdate(id, { isActive: true });
+    if (!tank) {
+      return res.status(404).json({ error: 'Tanque no encontrado' });
+    }
 
-  res.json({ ok: true });
+    // (opcional) sincronizar Product.isActive solo para UI
+    await Product.updateMany(
+      { type: 'tanque' },
+      { isActive: false }
+    );
+    await Product.findByIdAndUpdate(req.params.id, { isActive: true });
+
+    res.json({
+      id: tank.product._id,
+      name: tank.product.name,
+      quantity: tank.product.quantity,
+      capacity: tank.product.capacity,
+      litersPerBottle: tank.litersPerBottle,
+      pricePerFill: tank.pricePerFill
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
+
 
 
 // crear producto (admin)

@@ -59,39 +59,65 @@ export default function HouseDetail() {
     else fetch();
   }, [id, user]);
 
+const refreshActiveTank = async () => {
+  try {
+    const res = await axios.get(
+      "http://localhost:4000/api/inventory/tanks/active"
+    );
+    setTankInfo(res.data || null);
+    return res.data;
+  } catch (e) {
+    setTankInfo(null);
+    return null;
+  }
+};
+
 const addDelivery = async (usedPrepaid = false) => {
   try {
     const count = parseInt(deliveryCount) || 1;
 
-    // actualizar tankInfo antes de enviar
-    let tank = tankInfo;
-    if (tankInfo?.id) {
-      const activeRes = await axios.get(
-        "http://localhost:4000/api/inventory/tanks/active"
-      );
-      tank = activeRes.data;
-      setTankInfo(tank); // opcional: actualizar estado para UI
+    // 1️⃣ Obtener tanque activo actualizado
+    let tank = await refreshActiveTank();
+
+
+    // 2️⃣ Si no hay tanque activo
+    if (!tank || !tank.id) {
+      return Swal.fire({
+        icon: "warning",
+        title: "No hay tanque activo",
+        text: "Debes registrar o activar un tanque antes de continuar",
+      });
     }
 
-    if (tank && tank.id) {
-      // enviar con precio actualizado
-      await axios.post(
-        `http://localhost:4000/api/inventory/tanks/${tank.id}/fill`,
-        { house: id, count, usedPrepaid, pricePerFill: tank.pricePerFill }
-      );
-    } else {
-      await axios.post("http://localhost:4000/api/deliveries", {
+    // 3️⃣ Calcular litros necesarios
+    const litersNeeded = count * (tank.litersPerBottle || 20);
+
+    // 4️⃣ Validar stock del tanque
+    if (tank.quantity < litersNeeded) {
+      return handleEmptyTank(tank, litersNeeded);
+    }
+
+    // 5️⃣ Registrar llenado normalmente
+    await axios.post(
+      `http://localhost:4000/api/inventory/tanks/${tank.id}/fill`,
+      {
         house: id,
         count,
         usedPrepaid,
-      });
-    }
+        pricePerFill: tank.pricePerFill,
+      }
+    );
 
     let texto =
       count === 1
         ? `Se entregó ${count} botellón`
         : `Se entregaron ${count} botellones`;
-    await fetch();
+
+    await Promise.all([
+      fetch(),            // casa, pagos, entregas
+      refreshActiveTank() // tanque en tiempo real
+    ]);
+
     Swal.fire({
       title: "Entrega registrada",
       text: texto,
@@ -107,6 +133,7 @@ const addDelivery = async (usedPrepaid = false) => {
     });
   }
 };
+
 
   function updateTotal() {
     const total = Array.from(
@@ -547,6 +574,63 @@ const addDelivery = async (usedPrepaid = false) => {
       confirmButtonColor: "#3085d6",
     });
   };
+
+  const handleEmptyTank = async (tank, litersNeeded) => {
+  // Traer todos los productos
+  const res = await axios.get("http://localhost:4000/api/inventory");
+
+  // Buscar otros tanques con stock suficiente
+  const availableTanks = res.data.filter(
+    (i) =>
+      i.type === "tanque" &&
+      !i.isActive &&
+      i.quantity >= litersNeeded
+  );
+
+  // 🔁 Si hay otro tanque disponible
+  if (availableTanks.length > 0) {
+    const { value: selectedTank } = await Swal.fire({
+      title: "Tanque sin stock",
+      text: "Selecciona otro tanque disponible",
+      input: "select",
+      inputOptions: availableTanks.reduce((acc, t) => {
+        acc[t._id] = `${t.name} (${t.quantity} L)`;
+        return acc;
+      }, {}),
+      showCancelButton: true,
+    });
+
+    if (selectedTank) {
+await axios.put(
+  `http://localhost:4000/api/inventory/tanks/activate/${selectedTank}`
+);
+
+// 🔄 refrescar tanque activo inmediatamente
+await refreshActiveTank();
+
+Swal.fire(
+  "Tanque activado",
+  "Tanque cambiado correctamente",
+  "success"
+);
+
+    }
+  } else {
+    // ❌ No hay tanques disponibles
+    await Swal.fire({
+      icon: "warning",
+      title: "Tanque agotado",
+      html: `
+        <p>No hay tanques con suficiente stock.</p>
+        <ul style="text-align:left">
+          <li>Recarga el tanque actual</li>
+          <li>O registra un nuevo tanque en Inventario</li>
+        </ul>
+      `,
+    });
+  }
+};
+
 
   if (!detail)
     return <div className="text-center py-5">Cargando detalle...</div>;
