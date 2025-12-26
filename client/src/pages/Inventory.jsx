@@ -8,37 +8,36 @@ import { FaCashRegister } from 'react-icons/fa'
 
 export default function Inventory(){
   const [items, setItems] = useState([])
-  const [lowTanks, setLowTanks] = useState([])
-  const [form, setForm] = useState({ name: '', type: 'botellon', category: 'Botellones', unit: 'unidad', quantity: 0, price: 0, capacity: 0 })
+  const [form, setForm] = useState({ name: '', type: 'botellon', category: 'Botellones', unit: 'unidad', quantity: 0, minStock: 0, price: 0 })
+  const [lowStockItems, setLowStockItems] = useState([])
   const { user } = useAuth()
   const navigate = useNavigate()
 
   useEffect(()=>{ if (!user) navigate('/login'); else fetch() },[user])
   const fetch = async ()=>{ try{ const res = await axios.get('http://localhost:4000/api/inventory'); setItems(res.data) }catch(e){ console.error(e) } }
+  useEffect(() => {
+    const low = items.filter(i => {
+      if (!i.minStock || i.minStock <= 0) return false
 
-  useEffect(()=>{
-    // Solo mostrar alerta de tanques bajos si hay productos tipo tanque
-    const low = (items || []).filter(i => i.type === 'tanque' && i.unit === 'litro' && i.capacity && ((i.quantity/i.capacity)*100 < 30))
-    setLowTanks(low)
+      const pct = i.quantity / i.minStock
+      return pct <= 0.3   // 👈 30%
+    })
+
+    setLowStockItems(low)
   }, [items])
+
 
   const submit = async ()=>{
     if (!form.name) return Swal.fire({
-      title: 'Faltan datos',
-      text: 'El nombre del producto es obligatorio',
-      icon: 'warning',
-      confirmButtonColor: '#3085d6'
-    })
-    if (form.category === 'Llenado Tanque' && (!form.capacity || form.capacity <= 0)) return Swal.fire({
-      title: 'Faltan datos',
-      text: 'La capacidad del tanque es obligatoria para la categoría Llenado Tanque',
-      icon: 'warning',
-      confirmButtonColor: '#3085d6'
-    })
+      title: "Faltan datos",
+      text: "El nombre del producto es obligatorio",
+      icon: "warning",
+      confirmButtonColor: "#3085d6",
+    });
     try{
       // enviar category y unit al backend
       await axios.post('http://localhost:4000/api/inventory', form)
-      setForm({ name:'', type:'botellon', category: 'Botellones', unit: 'unidad', quantity:0, price:0, capacity:0 })
+      setForm({ name:'', type:'botellon', category: 'Botellones', unit: 'unidad', quantity:0, minStock: 0, price:0 })
       fetch()
       Swal.fire({
         title: 'Creado',
@@ -62,8 +61,8 @@ export default function Inventory(){
         `<input id="swal-category" class="swal2-input" placeholder="Categoría" value="${p.category || ''}" />` +
         `<input id="swal-unit" class="swal2-input" placeholder="Unidad" value="${p.unit || ''}" />` +
         `<input id="swal-qty" class="swal2-input" type="number" placeholder="Cantidad" value="${p.quantity || 0}" />` +
-        `<input id="swal-price" class="swal2-input" type="number" placeholder="Precio" value="${p.price || 0}" />` +
-        `<input id="swal-capacity" class="swal2-input" type="number" placeholder="Capacidad (litros)" value="${p.capacity || 0}" />`,
+        `<input id="swal-minStock" class="swal2-input" type="number" placeholder="Stock mínimo" value="${p.minStock || 0}" />` +
+        `<input id="swal-price" class="swal2-input" type="number" placeholder="Precio" value="${p.price || 0}" />`,
       focusConfirm: false,
       confirmButtonColor: '#3085d6',
       preConfirm: () => ({
@@ -71,8 +70,8 @@ export default function Inventory(){
         category: document.getElementById('swal-category').value,
         unit: document.getElementById('swal-unit').value,
         quantity: parseFloat(document.getElementById('swal-qty').value) || 0,
-        price: parseFloat(document.getElementById('swal-price').value) || 0,
-        capacity: parseFloat(document.getElementById('swal-capacity').value) || 0
+        minStock: parseFloat(document.getElementById('swal-minStock').value) || 0, // 👈 AQUÍ
+        price: parseFloat(document.getElementById('swal-price').value) || 0
       })
     })
     if (data) {
@@ -95,14 +94,6 @@ export default function Inventory(){
 
 const deleteProduct = async (p) => {
 
-  // bloquear eliminación de tanque activo
-  if (p.type === 'tanque' && p.isActive) {
-    return Swal.fire({
-      icon: 'warning',
-      title: 'No permitido',
-      text: 'No puedes eliminar el tanque activo. Activa otro tanque primero.'
-    });
-  }
 
   const res = await Swal.fire({
     title: 'Confirmar',
@@ -146,12 +137,6 @@ const deleteProduct = async (p) => {
 
 
   const sellProduct = async (p) => {
-    if (p.unit === 'litro') return Swal.fire({
-      title: 'No permitido',
-      text: 'Las ventas de llenado de tanques se registran automáticamente al actualizar el nivel del tanque.',
-      icon: 'info',
-      confirmButtonColor: '#3085d6'
-    })
     const { value: form } = await Swal.fire({
       title: `Vender ${p.name}`,
       html: `<input id="swal-qty" class="swal2-input" type="number" placeholder="Cantidad" value="1" />` +
@@ -186,55 +171,142 @@ const deleteProduct = async (p) => {
   <div className="d-flex justify-content-between align-items-center mb-3">
     <h4 className="mb-0 fw-semibold">Inventario</h4>
   </div>
-
-  {/* ALERTA TANQUES BAJOS */}
-  {lowTanks.length > 0 && (
+  {/* ALERTA STOCK BAJO */}
+  {lowStockItems.length > 0 && (
     <div className="alert alert-warning d-flex align-items-center py-2">
       <i className="bi bi-exclamation-triangle-fill me-2"></i>
       <small>
-        Tanques con nivel bajo:&nbsp;
-        <strong>{lowTanks.map(t => t.name).join(", ")}</strong>
+        Productos con stock bajo:&nbsp;
+        <strong>
+          {lowStockItems.map(p => {
+            const pct = Math.round((p.quantity / p.minStock) * 100)
+            return `${p.name} (${pct}%)`
+          }).join(', ')}
+        </strong>
       </small>
     </div>
   )}
-
   {/* FORMULARIO SOLO PARA PRODUCTOS NORMALES */}
-  <div className="card shadow-sm border-0 mb-4">
-    <div className="card-body">
-      <h6 className="text-muted mb-3">Agregar / Actualizar producto</h6>
-      <div className="row g-3">
-        <div className="col-md-4">
-          <label className="form-label small text-muted">Nombre</label>
-          <input className="form-control form-control-sm" placeholder="Nombre del producto" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
-        </div>
-        <div className="col-md-3">
-          <label className="form-label small text-muted">Categoría</label>
-          <select className="form-select form-select-sm" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
-            <option>Botellones</option>
-            <option>Artículos de limpieza</option>
-          </select>
-        </div>
-        <div className="col-md-2">
-          <label className="form-label small text-muted">Unidad</label>
-          <select className="form-select form-select-sm" value={form.unit} onChange={e => setForm({ ...form, unit: e.target.value })}>
-            <option value="unidad">Unidad</option>
-            <option value="kg">Kg</option>
-          </select>
-        </div>
-        <div className="col-md-3">
-          <label className="form-label small text-muted">Cantidad</label>
-          <input type="number" className="form-control form-control-sm" value={form.quantity} onChange={e => setForm({ ...form, quantity: Number(e.target.value) })} />
-        </div>
-        <div className="col-md-3">
-          <label className="form-label small text-muted">Precio</label>
-          <input type="number" className="form-control form-control-sm" placeholder="$0.00" value={form.price} onChange={e => setForm({ ...form, price: Number(e.target.value) })} />
-        </div>
-        <div className="col-md-3 d-flex align-items-end">
-          <button className="btn btn-primary btn-sm w-100" onClick={submit}>Guardar</button>
-        </div>
+<div className="card shadow-sm border-0 mb-4">
+  <div className="card-body">
+    <h6 className="fw-semibold mb-3">
+      {form._id ? 'Actualizar producto' : 'Agregar producto'}
+    </h6>
+
+    <div className="row g-3">
+      {/* Nombre */}
+      <div className="col-md-4">
+        <label className="form-label small text-muted">
+          Nombre del producto
+        </label>
+        <input
+          className="form-control form-control-sm"
+          placeholder="Ej: Botellón vacío"
+          value={form.name}
+          onChange={e =>
+            setForm({ ...form, name: e.target.value })
+          }
+        />
+      </div>
+
+      {/* Categoría */}
+      <div className="col-md-3">
+        <label className="form-label small text-muted">
+          Categoría
+        </label>
+        <select
+          className="form-select form-select-sm"
+          value={form.category}
+          onChange={e =>
+            setForm({ ...form, category: e.target.value })
+          }
+        >
+          <option value="">Seleccionar</option>
+          <option>Botellones</option>
+          <option>Dispensadores</option>
+          <option>Artículos de limpieza</option>
+          <option>Repuestos</option>
+          <option>Otros</option>
+        </select>
+      </div>
+
+      {/* Unidad */}
+      <div className="col-md-2">
+        <label className="form-label small text-muted">
+          Unidad
+        </label>
+        <select
+          className="form-select form-select-sm"
+          value={form.unit}
+          onChange={e =>
+            setForm({ ...form, unit: e.target.value })
+          }
+        >
+          <option value="unidad">Unidad</option>
+          <option value="kg">Kg</option>
+          <option value="litro">Litro</option>
+        </select>
+      </div>
+
+      {/* Precio */}
+      <div className="col-md-3">
+        <label className="form-label small text-muted">
+          Precio unitario
+        </label>
+        <input
+          type="number"
+          className="form-control form-control-sm"
+          placeholder="$0.00"
+          value={form.price}
+          onChange={e =>
+            setForm({ ...form, price: Number(e.target.value) })
+          }
+        />
+      </div>
+
+      {/* Cantidad */}
+      <div className="col-md-3">
+        <label className="form-label small text-muted">
+          Cantidad actual
+        </label>
+        <input
+          type="number"
+          className="form-control form-control-sm"
+          value={form.quantity}
+          onChange={e =>
+            setForm({ ...form, quantity: Number(e.target.value) })
+          }
+        />
+      </div>
+
+      {/* Stock mínimo */}
+      <div className="col-md-3">
+        <label className="form-label small text-muted">
+          Stock mínimo
+        </label>
+        <input
+          type="number"
+          className="form-control form-control-sm"
+          placeholder="Alerta cuando baje de..."
+          value={form.minStock || ''}
+          onChange={e =>
+            setForm({ ...form, minStock: Number(e.target.value) })
+          }
+        />
+      </div>
+
+      {/* Botón */}
+      <div className="col-md-3 d-flex align-items-end">
+        <button
+          className="btn btn-primary btn-sm w-100"
+          onClick={submit}
+        >
+          {form._id ? 'Actualizar' : 'Guardar'}
+        </button>
       </div>
     </div>
   </div>
+</div>
 
   {/* TABLA */}
   <div className="card shadow-sm border-0">
@@ -246,19 +318,48 @@ const deleteProduct = async (p) => {
               <th>Producto</th>
               <th>Categoría</th>
               <th>Stock</th>
-              <th>Estado</th>
-              <th className="text-end">Precio</th>
+              <th>Estado del inventario</th>
+              <th className="text-end">Precio unitario</th>
               <th className="text-end">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {items.filter(i => i.type !== 'tanque' && i.category !== 'Llenado Tanque').map(i => {
               return (
-                <tr key={i._id}>
+                <tr key={i._id}
+                className={
+                  i.minStock > 0 && (i.quantity / i.minStock) <= 0.3
+                    ? 'table-warning'
+                    : ''
+                }>
                   <td className="fw-medium">{i.name}</td>
                   <td><span className="badge bg-secondary">{i.category || i.type}</span></td>
                   <td>{i.quantity} {i.unit}</td>
-                  <td><small className="text-muted">N/A</small></td>
+<td>
+  {(() => {
+    const min = i.minStock || 0
+    if (!min) return <span className="text-muted">N/A</span>
+
+    const pct = Math.min(100, Math.round((i.quantity / min) * 100))
+    const cls =
+      pct >= 70 ? 'bg-success' :
+      pct >= 30 ? 'bg-warning' :
+      'bg-danger'
+
+    return (
+      <div className="d-flex align-items-center gap-2">
+        <div className="progress flex-grow-1" style={{ height: '10px' }}>
+          <div
+            className={`progress-bar ${cls}`}
+            style={{ width: pct + '%' }}
+          />
+        </div>
+        <small className="fw-semibold">{pct}%</small>
+      </div>
+    )
+  })()}
+</td>
+
                   <td className="text-end">${i.price}</td>
                   <td className="text-end">
                     <button className="btn btn-sm btn-outline-success me-2" onClick={() => sellProduct(i)}><FaCashRegister /></button>

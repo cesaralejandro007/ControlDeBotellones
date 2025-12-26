@@ -36,7 +36,9 @@ export default function HouseDetail() {
       setBotellonStock(bot ? bot.quantity : null);
       // get tank summary to read pricePerFill
       try {
-        const active = await axios.get("http://localhost:4000/api/inventory/tanks/active");
+        const active = await axios.get(
+          "http://localhost:4000/api/inventory/tanks/active"
+        );
         setTankInfo(active.data || null);
       } catch (e) {
         setTankInfo(null);
@@ -59,81 +61,79 @@ export default function HouseDetail() {
     else fetch();
   }, [id, user]);
 
-const refreshActiveTank = async () => {
-  try {
-    const res = await axios.get(
-      "http://localhost:4000/api/inventory/tanks/active"
-    );
-    setTankInfo(res.data || null);
-    return res.data;
-  } catch (e) {
-    setTankInfo(null);
-    return null;
-  }
-};
+  const refreshActiveTank = async () => {
+    try {
+      const res = await axios.get(
+        "http://localhost:4000/api/inventory/tanks/active"
+      );
+      setTankInfo(res.data || null);
+      return res.data;
+    } catch (e) {
+      setTankInfo(null);
+      return null;
+    }
+  };
 
-const addDelivery = async (usedPrepaid = false) => {
-  try {
-    const count = parseInt(deliveryCount) || 1;
+  const addDelivery = async (usedPrepaid = false) => {
+    try {
+      const count = parseInt(deliveryCount) || 1;
 
-    // 1️⃣ Obtener tanque activo actualizado
-    let tank = await refreshActiveTank();
+      // 1️⃣ Obtener tanque activo actualizado
+      let tank = await refreshActiveTank();
 
+      // 2️⃣ Si no hay tanque activo
+      if (!tank || !tank.id) {
+        return Swal.fire({
+          icon: "warning",
+          title: "No hay tanque activo",
+          text: "Debes registrar o activar un tanque antes de continuar",
+        });
+      }
 
-    // 2️⃣ Si no hay tanque activo
-    if (!tank || !tank.id) {
-      return Swal.fire({
-        icon: "warning",
-        title: "No hay tanque activo",
-        text: "Debes registrar o activar un tanque antes de continuar",
+      // 3️⃣ Calcular litros necesarios
+      const litersNeeded = count * (tank.litersPerBottle || 20);
+
+      // 4️⃣ Validar stock del tanque
+      if (tank.quantity < litersNeeded) {
+        return handleEmptyTank(tank, litersNeeded);
+      }
+
+      // 5️⃣ Registrar llenado normalmente
+      await axios.post(
+        `http://localhost:4000/api/inventory/tanks/${tank.id}/fill`,
+        {
+          house: id,
+          count,
+          usedPrepaid,
+          pricePerFill: tank.pricePerFill,
+        }
+      );
+
+      let texto =
+        count === 1
+          ? `Se entregó ${count} botellón`
+          : `Se entregaron ${count} botellones`;
+
+      await Promise.all([
+        fetch(), // casa, pagos, entregas
+        refreshActiveTank(), // tanque en tiempo real
+      ]);
+
+      Swal.fire({
+        title: "Entrega registrada",
+        text: texto,
+        icon: "success",
+        confirmButtonColor: "#3085d6",
+      });
+    } catch (err) {
+      Swal.fire({
+        title: "Error",
+        text: err.response?.data?.error || err.message,
+        icon: "error",
+        confirmButtonColor: "#3085d6",
       });
     }
-
-    // 3️⃣ Calcular litros necesarios
-    const litersNeeded = count * (tank.litersPerBottle || 20);
-
-    // 4️⃣ Validar stock del tanque
-    if (tank.quantity < litersNeeded) {
-      return handleEmptyTank(tank, litersNeeded);
-    }
-
-    // 5️⃣ Registrar llenado normalmente
-    await axios.post(
-      `http://localhost:4000/api/inventory/tanks/${tank.id}/fill`,
-      {
-        house: id,
-        count,
-        usedPrepaid,
-        pricePerFill: tank.pricePerFill,
-      }
-    );
-
-    let texto =
-      count === 1
-        ? `Se entregó ${count} botellón`
-        : `Se entregaron ${count} botellones`;
-
-    await Promise.all([
-      fetch(),            // casa, pagos, entregas
-      refreshActiveTank() // tanque en tiempo real
-    ]);
-
-    Swal.fire({
-      title: "Entrega registrada",
-      text: texto,
-      icon: "success",
-      confirmButtonColor: "#3085d6",
-    });
-  } catch (err) {
-    Swal.fire({
-      title: "Error",
-      text: err.response?.data?.error || err.message,
-      icon: "error",
-      confirmButtonColor: "#3085d6",
-    });
-  }
-};
-
+  };
 
   function updateTotal() {
     const total = Array.from(
@@ -576,61 +576,56 @@ const addDelivery = async (usedPrepaid = false) => {
   };
 
   const handleEmptyTank = async (tank, litersNeeded) => {
-  // Traer todos los productos
-  const res = await axios.get("http://localhost:4000/api/inventory");
+    // Traer todos los productos
+    const res = await axios.get("http://localhost:4000/api/inventory");
 
-  // Buscar otros tanques con stock suficiente
-  const availableTanks = res.data.filter(
-    (i) =>
-      i.type === "tanque" &&
-      !i.isActive &&
-      i.quantity >= litersNeeded
-  );
+    // Buscar otros tanques con stock suficiente
+    const availableTanks = res.data.filter(
+      (i) => i.type === "tanque" && !i.isActive && i.quantity >= litersNeeded
+    );
 
-  // 🔁 Si hay otro tanque disponible
-  if (availableTanks.length > 0) {
-    const { value: selectedTank } = await Swal.fire({
-      title: "Tanque sin stock",
-      text: "Selecciona otro tanque disponible",
-      input: "select",
-      inputOptions: availableTanks.reduce((acc, t) => {
-        acc[t._id] = `${t.name} (${t.quantity} L)`;
-        return acc;
-      }, {}),
-      showCancelButton: true,
-    });
+    // 🔁 Si hay otro tanque disponible
+    if (availableTanks.length > 0) {
+      const { value: selectedTank } = await Swal.fire({
+        title: "Tanque sin stock",
+        text: "Selecciona otro tanque disponible",
+        input: "select",
+        inputOptions: availableTanks.reduce((acc, t) => {
+          acc[t._id] = `${t.name} (${t.quantity} L)`;
+          return acc;
+        }, {}),
+        showCancelButton: true,
+      });
 
-    if (selectedTank) {
-await axios.put(
-  `http://localhost:4000/api/inventory/tanks/activate/${selectedTank}`
-);
+      if (selectedTank) {
+        await axios.put(
+          `http://localhost:4000/api/inventory/tanks/activate/${selectedTank}`
+        );
 
-// 🔄 refrescar tanque activo inmediatamente
-await refreshActiveTank();
+        // 🔄 refrescar tanque activo inmediatamente
+        await refreshActiveTank();
 
-Swal.fire(
-  "Tanque activado",
-  "Tanque cambiado correctamente",
-  "success"
-);
-
-    }
-  } else {
-    // ❌ No hay tanques disponibles
-    await Swal.fire({
-      icon: "warning",
-      title: "Tanque agotado",
-      html: `
+        Swal.fire(
+          "Tanque activado",
+          "Tanque cambiado correctamente",
+          "success"
+        );
+      }
+    } else {
+      // ❌ No hay tanques disponibles
+      await Swal.fire({
+        icon: "warning",
+        title: "Tanque agotado",
+        html: `
         <p>No hay tanques con suficiente stock.</p>
         <ul style="text-align:left">
           <li>Recarga el tanque actual</li>
           <li>O registra un nuevo tanque en Inventario</li>
         </ul>
       `,
-    });
-  }
-};
-
+      });
+    }
+  };
 
   if (!detail)
     return <div className="text-center py-5">Cargando detalle...</div>;
@@ -772,17 +767,19 @@ Swal.fire(
           {/* Botellones en tanque */}
           <div className="card shadow-sm border-0 mb-3">
             <div className="card-body">
-              <h6 className="text-secondary">Información de recarga por botellón</h6>
+              <h6 className="text-secondary">
+                Información de recarga por botellón
+              </h6>
               {tankInfo ? (
                 <>
                   <p className="mb-1">
                     Litros actuales: <strong>{tankInfo.quantity}</strong> /{" "}
                     {tankInfo.capacity || "—"} L
                   </p>
-                    <p className="mb-1">
-                      Litros por botellón:{" "}
-                      <strong>{tankInfo.litersPerBottle || 20} L</strong>
-                    </p>
+                  <p className="mb-1">
+                    Litros por botellón:{" "}
+                    <strong>{tankInfo.litersPerBottle || 20} L</strong>
+                  </p>
                   <p className="mb-1">
                     Botellones aproximados:{" "}
                     <strong>

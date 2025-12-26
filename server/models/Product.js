@@ -7,6 +7,7 @@ const ProductSchema = new mongoose.Schema({
   unit: { type: String },
   capacity: { type: Number, default: 0 },
   quantity: { type: Number, default: 0 },
+  minStock: { type: Number, default: 0 },
   price: { type: Number, default: 0 },
 
   // 👇 ESTE ES EL CAMPO QUE FALTABA

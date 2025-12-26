@@ -1,36 +1,46 @@
-import React, { useEffect, useState } from 'react'
-import axios from 'axios'
-import { useAuth } from '../context/AuthContext'
-import { useNavigate } from 'react-router-dom'
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
-export default function Movements(){
-  const [movements, setMovements] = useState([])
-  const [products, setProducts] = useState([])
-  const [form, setForm] = useState({ product: '', type: 'in', quantity: 0, notes: '' })
-  const [selectedProduct, setSelectedProduct] = useState(null)
-  const { user } = useAuth()
-  const navigate = useNavigate()
+export default function Movements() {
+  const [movements, setMovements] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [form, setForm] = useState({
+    product: "",
+    type: "in",
+    quantity: 0,
+    notes: "",
+  });
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
-  const fetch = async ()=>{
+  const fetch = async () => {
     const [mRes, pRes] = await Promise.all([
-      axios.get('http://localhost:4000/api/inventory/movements'),
-      axios.get('http://localhost:4000/api/inventory')
-    ])
-    setMovements(mRes.data)
-    setProducts(pRes.data)
-    setSelectedProduct(null)
-  }
+      axios.get("http://localhost:4000/api/inventory/movements"),
+      axios.get("http://localhost:4000/api/inventory"),
+    ]);
+    setMovements(mRes.data);
+    setProducts(pRes.data);
+    setSelectedProduct(null);
+  };
 
-  useEffect(()=>{ if (!user) navigate('/login'); else fetch() }, [user])
+  useEffect(() => {
+    if (!user) navigate("/login");
+    else fetch();
+  }, [user]);
 
-  const submit = async ()=>{
-    try{
+  const submit = async () => {
+    try {
       // If selected product is a tank (litro), quantity is in liters
-      await axios.post('http://localhost:4000/api/inventory/movements', form)
-      setForm({ product:'', type:'in', quantity:0, notes:'' })
-      fetch()
-    }catch(err){ alert(err.response?.data?.error || err.message) }
-  }
+      await axios.post("http://localhost:4000/api/inventory/movements", form);
+      setForm({ product: "", type: "in", quantity: 0, notes: "" });
+      fetch();
+    } catch (err) {
+      alert(err.response?.data?.error || err.message);
+    }
+  };
 
   return (
     <div className="container mt-3">
@@ -85,7 +95,7 @@ export default function Movements(){
       </div>
 
       <h5>Últimos movimientos</h5>
-      
+
       <ul className="list-group">
         {movements.map((m) => (
           <li

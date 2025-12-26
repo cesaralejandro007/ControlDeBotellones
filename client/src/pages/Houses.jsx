@@ -53,7 +53,7 @@ export default function Houses() {
       Swal.fire({
         title: "Error",
         text: err.response?.data?.error || err.message,
-        icon: "error", 
+        icon: "error",
         confirmButtonColor: "#3085d6",
       });
     }
@@ -85,7 +85,7 @@ export default function Houses() {
         Swal.fire({
           title: "Cambios guardados",
           text: "Se han guardado los cambios realizados.",
-          icon: "success", 
+          icon: "success",
           confirmButtonColor: "#3085d6",
         });
       } catch (err) {
@@ -121,12 +121,12 @@ export default function Houses() {
           confirmButtonColor: "#3085d6",
         });
       } catch (err) {
-        Swal.fire(
-          {title: "Error",
+        Swal.fire({
+          title: "Error",
           text: err.response?.data?.error || err.message,
           icon: "error",
-          confirmButtonColor: "#3085d6",}
-        );
+          confirmButtonColor: "#3085d6",
+        });
       }
     }
   };
@@ -138,9 +138,7 @@ export default function Houses() {
   );
 
   return (
-    <div
-      className="container mt-4"
-    >
+    <div className="container mt-4">
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h4>Casas</h4>
       </div>
@@ -194,80 +192,77 @@ export default function Houses() {
 
       {/* TABLA */}
       <div className="card shadow-sm mb-4 border-0">
-  <div className="card-body p-3">
+        <div className="card-body p-3">
+          {/* 🔍 BUSCADOR */}
+          <div className="input-group mb-3">
+            <span className="input-group-text bg-white border-end-0">
+              <FaSearch className="text-muted" />
+            </span>
+            <input
+              type="text"
+              className="form-control border-start-0"
+              placeholder="Buscar por código o propietario"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
 
-    {/* 🔍 BUSCADOR */}
-    <div className="input-group mb-3">
-      <span className="input-group-text bg-white border-end-0">
-        <FaSearch className="text-muted" />
-      </span>
-      <input
-        type="text"
-        className="form-control border-start-0"
-        placeholder="Buscar por código o propietario"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
-    </div>
+          {/* 📋 TABLA */}
+          <div className="table-responsive">
+            <table className="table table-hover align-middle mb-0">
+              <thead className="table-light">
+                <tr>
+                  <th>Código</th>
+                  <th>Propietario</th>
+                  <th>Teléfono</th>
+                  <th className="text-end">Acciones</th>
+                </tr>
+              </thead>
 
-    {/* 📋 TABLA */}
-    <div className="table-responsive">
-      <table className="table table-hover align-middle mb-0">
-        <thead className="table-light">
-          <tr>
-            <th>Código</th>
-            <th>Propietario</th>
-            <th>Teléfono</th>
-            <th className="text-end">Acciones</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {filteredHouses.length ? (
-            filteredHouses.map((h) => (
-              <tr key={h._id}>
-                <td>
-                  <Link
-                    to={`/houses/${h._id}`}
-                    className="fw-semibold text-dark"
-                  >
-                    {h.code}
-                  </Link>
-                </td>
-                <td>{h.ownerName}</td>
-                <td>{h.phone}</td>
-                <td className="text-end">
-                  <button
-                    className="btn btn-sm btn-outline-primary me-2"
-                    onClick={() => editHouse(h)}
-                    title="Editar"
-                  >
-                    <FaEdit />
-                  </button>
-                  <button
-                    className="btn btn-sm btn-outline-danger"
-                    onClick={() => deleteHouse(h)}
-                    title="Eliminar"
-                  >
-                    <FaTrash />
-                  </button>
-                </td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan="4" className="text-center text-muted py-4">
-                No se encontraron casas
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
-
-  </div>
-</div>
-
+              <tbody>
+                {filteredHouses.length ? (
+                  filteredHouses.map((h) => (
+                    <tr key={h._id}>
+                      <td>
+                        <Link
+                          to={`/houses/${h._id}`}
+                          className="fw-semibold text-dark"
+                        >
+                          {h.code}
+                        </Link>
+                      </td>
+                      <td>{h.ownerName}</td>
+                      <td>{h.phone}</td>
+                      <td className="text-end">
+                        <button
+                          className="btn btn-sm btn-outline-primary me-2"
+                          onClick={() => editHouse(h)}
+                          title="Editar"
+                        >
+                          <FaEdit />
+                        </button>
+                        <button
+                          className="btn btn-sm btn-outline-danger"
+                          onClick={() => deleteHouse(h)}
+                          title="Eliminar"
+                        >
+                          <FaTrash />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="4" className="text-center text-muted py-4">
+                      No se encontraron casas
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

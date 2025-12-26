@@ -11,6 +11,7 @@ function getAuthHeaders() {
 
 export default function TankDashboard() {
   const [tanks, setTanks] = useState(null);
+  const [lowTanks, setLowTanks] = useState([])
   const [form, setForm] = useState({
     name: "",
     capacity: 0,
@@ -25,6 +26,7 @@ export default function TankDashboard() {
     const token = localStorage.getItem("token");
     if (token) fetchTanks();
   }, []);
+  
 
   const fetchTanks = async () => {
     try {
@@ -39,6 +41,19 @@ export default function TankDashboard() {
       setTanks([]);
     }
   };
+
+  useEffect(() => {
+    if (!tanks) return
+
+    const low = tanks.filter(t => {
+      if (!t.capacity || !t.quantity) return false
+      const pct = (t.quantity / t.capacity) * 100
+      return pct < 30
+    })
+
+    setLowTanks(low)
+  }, [tanks])
+    
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -226,6 +241,17 @@ export default function TankDashboard() {
     <div className="container mt-3">
       <h2>Panel de Tanques</h2>
       <p>Gestión completa de tanques de llenado</p>
+
+      {/* ALERTA TANQUES BAJOS */}
+      {lowTanks.length > 0 && (
+        <div className="alert alert-warning d-flex align-items-center py-2">
+          <i className="bi bi-exclamation-triangle-fill me-2"></i>
+          <small>
+            Tanques con nivel bajo:&nbsp;
+            <strong>{lowTanks.map(t => t.name).join(", ")}</strong>
+          </small>
+        </div>
+      )}
 
       {/* Formulario alta/edición */}
       <div className="card shadow-sm border-0 mb-4">

@@ -266,7 +266,7 @@ export default function Dashboard() {
                     >
                       <span className="d-flex align-items-center gap-2 small">
                         <FaHome className="text-success" />
-                        {h.code}  {h.owner}
+                        {h.code} {h.owner}
                       </span>
                       <span className="badge bg-success small">OK</span>
                     </li>
@@ -314,7 +314,7 @@ export default function Dashboard() {
                     >
                       <span className="d-flex align-items-center gap-2 small">
                         <FaHome className="text-danger" />
-                        {h.code}  {h.owner}
+                        {h.code} {h.owner}
                       </span>
 
                       <span className="badge bg-danger d-flex align-items-center gap-1 small">

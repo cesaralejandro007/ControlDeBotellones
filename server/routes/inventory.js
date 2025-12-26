@@ -67,16 +67,37 @@ router.put('/tanks/activate/:id', auth, isAdmin, async (req, res) => {
 // crear producto (admin)
 router.post('/', auth, isAdmin, async (req, res) => {
   try {
+    let {
+      name,
+      type = 'producto',
+      category,
+      unit = 'unidad',
+      quantity = 0,
+      minStock = 0,
+      price = 0,
+      capacity = 0
+    } = req.body;
 
-    let { name, type, category, unit, quantity = 0, price = 0, capacity = 0 } = req.body;
+    const ALLOWED_CATEGORIES = [
+      'Llenado Tanque',
+      'Botellones',
+      'Dispensadores',
+      'Artículos de limpieza',
+      'Repuestos',
+      'Otros'
+    ];
 
-    const allowedCategories = ['Llenado Tanque', 'Botellones', 'Artículos de limpieza'];
-    if (!allowedCategories.includes(category)) category = 'Otros';
+    if (!ALLOWED_CATEGORIES.includes(category)) {
+      category = 'Otros';
+    }
 
+    // si es tanque
     if (category === 'Llenado Tanque') {
       unit = 'litro';
+      type = 'tanque';
+
       if (!capacity || capacity <= 0) {
-        return res.status(400).json({ error: 'Capacidad obligatoria' });
+        return res.status(400).json({ error: 'Capacidad obligatoria para el tanque' });
       }
     }
 
@@ -86,20 +107,22 @@ router.post('/', auth, isAdmin, async (req, res) => {
       category,
       unit,
       quantity,
+      minStock, // ✅ AHORA SE GUARDA
       price,
       capacity,
       isActive: category === 'Llenado Tanque' ? false : undefined
     });
 
-    // tanque → crear registro Tank
+    // crear registro de tanque
     if (category === 'Llenado Tanque') {
       await Tank.create({
         product: p._id,
         pricePerFill: price || 0,
-        litersPerBottle: 20 // agregar esta línea
+        litersPerBottle: 20
       });
     }
 
+    // movimiento inicial
     if (quantity > 0) {
       await InventoryMovement.create({
         product: p._id,
@@ -125,27 +148,34 @@ router.put('/:id', auth, isAdmin, async (req, res) => {
     if (!p) return res.status(404).json({ error: 'Producto no encontrado' });
 
     const prevQty = p.quantity || 0;
-    const newQty = typeof req.body.quantity === 'number' ? req.body.quantity : prevQty;
+    const newQty =
+      typeof req.body.quantity === 'number'
+        ? req.body.quantity
+        : prevQty;
+
     const delta = newQty - prevQty;
 
+    // actualizar campos
     p.name = req.body.name ?? p.name;
     p.type = req.body.type ?? p.type;
     p.category = req.body.category ?? p.category;
     p.unit = req.body.unit ?? p.unit;
     p.price = req.body.price ?? p.price;
+    p.capacity = req.body.capacity ?? p.capacity;
+    p.minStock = req.body.minStock ?? p.minStock; 
+    p.quantity = newQty;
 
-    if (req.body.category === 'Llenado Tanque') {
+    // validación tanque
+    if (p.category === 'Llenado Tanque') {
       p.unit = 'litro';
-      if (req.body.capacity <= 0) {
-        return res.status(400).json({ error: 'Capacidad obligatoria' });
+      if (!p.capacity || p.capacity <= 0) {
+        return res.status(400).json({ error: 'Capacidad obligatoria para el tanque' });
       }
     }
 
-    p.capacity = req.body.capacity ?? p.capacity;
-    p.quantity = newQty;
-
     await p.save();
 
+    // registrar movimiento
     if (delta !== 0) {
       await InventoryMovement.create({
         product: p._id,
@@ -162,6 +192,7 @@ router.put('/:id', auth, isAdmin, async (req, res) => {
     res.status(400).json({ error: err.message });
   }
 });
+
 
 
 router.delete('/:id', auth, isAdmin, async (req, res) => {
