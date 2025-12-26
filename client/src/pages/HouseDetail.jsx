@@ -772,16 +772,25 @@ Swal.fire(
           {/* Botellones en tanque */}
           <div className="card shadow-sm border-0 mb-3">
             <div className="card-body">
-              <h6 className="text-secondary">Botellones en tanque</h6>
+              <h6 className="text-secondary">Información de recarga por botellón</h6>
               {tankInfo ? (
                 <>
                   <p className="mb-1">
                     Litros actuales: <strong>{tankInfo.quantity}</strong> /{" "}
                     {tankInfo.capacity || "—"} L
                   </p>
+                    <p className="mb-1">
+                      Litros por botellón:{" "}
+                      <strong>{tankInfo.litersPerBottle || 20} L</strong>
+                    </p>
                   <p className="mb-1">
                     Botellones aproximados:{" "}
-                    <strong>{Math.floor((tankInfo.quantity || 0) / 20)}</strong>
+                    <strong>
+                      {Math.floor(
+                        (tankInfo.quantity || 0) /
+                          (tankInfo.litersPerBottle || 20)
+                      )}
+                    </strong>
                   </p>
                   <p className="mb-1">
                     Precio llenado:{" "}
@@ -824,16 +833,6 @@ Swal.fire(
               ) : (
                 <p className="mb-0 text-muted">Tanque no registrado</p>
               )}
-            </div>
-          </div>
-
-          {/* Stock botellones */}
-          <div className="card shadow-sm border-0 mb-3">
-            <div className="card-body">
-              <h6 className="text-secondary">Stock botellones</h6>
-              <p className="mb-0">
-                {botellonStock === null ? "No registrado" : botellonStock}
-              </p>
             </div>
           </div>
         </div>
@@ -1012,7 +1011,6 @@ Swal.fire(
                               >
                                 <FaInfoCircle />
                               </button>
-
 
                               {!isConfirmed && user?.role === "admin" && (
                                 <button

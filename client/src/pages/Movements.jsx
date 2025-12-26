@@ -36,33 +36,72 @@ export default function Movements(){
     <div className="container mt-3">
       <h4>Movimientos de Inventario</h4>
       <div className="mb-3">
-        <select className="form-select" value={form.product} onChange={e=>{ setForm({...form, product:e.target.value}); const p = products.find(x=> x._id === e.target.value); setSelectedProduct(p || null) }}>
+        <select
+          className="form-select"
+          value={form.product}
+          onChange={(e) => {
+            setForm({ ...form, product: e.target.value });
+            const p = products.find((x) => x._id === e.target.value);
+            setSelectedProduct(p || null);
+          }}
+        >
           <option value="">Selecciona producto</option>
-          {products.map(p=> <option key={p._id} value={p._id}>{p.name} (stock: {p.quantity})</option>)}
+          {products.map((p) => (
+            <option key={p._id} value={p._id}>
+              {p.name} (stock: {p.quantity})
+            </option>
+          ))}
         </select>
         <div className="input-group mt-2">
-          <select className="form-select" value={form.type} onChange={e=>setForm({...form, type:e.target.value})}>
+          <select
+            className="form-select"
+            value={form.type}
+            onChange={(e) => setForm({ ...form, type: e.target.value })}
+          >
             <option value="in">Entrada</option>
             <option value="out">Salida</option>
           </select>
-          <input className="form-control" type="number" value={form.quantity} onChange={e=>setForm({...form, quantity:parseInt(e.target.value)})} placeholder={selectedProduct?.unit === 'litro' ? 'Litros' : 'Cantidad'} />
-          <input className="form-control" value={form.notes} onChange={e=>setForm({...form, notes:e.target.value})} placeholder="Notas" />
-          <button className="btn btn-primary" onClick={submit}>Registrar</button>
+          <input
+            className="form-control"
+            type="number"
+            value={form.quantity}
+            onChange={(e) =>
+              setForm({ ...form, quantity: parseInt(e.target.value) })
+            }
+            placeholder={
+              selectedProduct?.unit === "litro" ? "Litros" : "Cantidad"
+            }
+          />
+          <input
+            className="form-control"
+            value={form.notes}
+            onChange={(e) => setForm({ ...form, notes: e.target.value })}
+            placeholder="Notas"
+          />
+          <button className="btn btn-primary" onClick={submit}>
+            Registrar
+          </button>
         </div>
       </div>
 
       <h5>Últimos movimientos</h5>
+      
       <ul className="list-group">
-        {movements.map(m=> (
-          <li key={m._id} className="list-group-item">
-            {new Date(m.createdAt).toLocaleString()} — {m.product?.name} — {m.type} — {m.quantity} {m.product?.unit || ''}
-            {m.product?.unit === 'litro' && (
-              <span className="ms-2 text-muted">(≈ {Math.floor(m.quantity/20)} botellones)</span>
+        {movements.map((m) => (
+          <li
+            key={m._id}
+            className={`list-group-item d-flex justify-content-between align-items-center ${
+              m.product?.unit === "litro" ? "list-group-item-info" : ""
+            }`}
+          >
+            {new Date(m.createdAt).toLocaleString()} — <b>{m.product?.name}</b>
+            {m.product?.unit === "litro" && (
+              <span className="badge bg-primary ms-2">Tanque</span>
             )}
-            — {m.user?.name || ''} — {m.notes}
+            — {m.user?.name || ""} — {m.notes}
           </li>
         ))}
       </ul>
     </div>
-  )
+  );
 }

@@ -25,7 +25,7 @@ async function run(){
     console.log('Created tank', tank._id)
 
     // 2) recharge tank (inventory movement in)
-    res = await fetch(base + '/api/inventory/movements', { method: 'POST', headers, body: JSON.stringify({ productId: tank._id, type: 'in', quantity: 80, note: 'Smoke test recarga' }) })
+    res = await fetch(base + '/api/inventory/movements', { method: 'POST', headers, body: JSON.stringify({ product: tank._id, type: 'in', quantity: 80, notes: 'Smoke test recarga' }) })
     if (!res.ok) throw new Error('/api/inventory/movements POST failed ' + res.status)
     const move = await res.json()
     console.log('Created movement', move._id)

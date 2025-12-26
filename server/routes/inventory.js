@@ -33,41 +33,34 @@ router.get('/tanks/active', async (req, res) => {
 
 // activar tanque
 // 🔁 Activar tanque (desactiva los demás)
-router.put('/tanks/activate/:id', async (req, res) => {
-  try {
-    // 1️⃣ Desactivar TODOS los tanques
-    await Tank.updateMany({}, { active: false });
+router.put('/tanks/activate/:id', auth, isAdmin, async (req, res) => {
+  // Desactivar SOLO los demás
+  await Tank.updateMany(
+    { product: { $ne: req.params.id } },
+    { active: false }
+  )
 
-    // 2️⃣ Activar el seleccionado
-    const tank = await Tank.findOneAndUpdate(
-      { product: req.params.id },
-      { active: true },
-      { new: true }
-    ).populate('product');
+  const tank = await Tank.findOneAndUpdate(
+    { product: req.params.id },
+    { active: true },
+    { new: true }
+  ).populate('product')
 
-    if (!tank) {
-      return res.status(404).json({ error: 'Tanque no encontrado' });
-    }
-
-    // (opcional) sincronizar Product.isActive solo para UI
-    await Product.updateMany(
-      { type: 'tanque' },
-      { isActive: false }
-    );
-    await Product.findByIdAndUpdate(req.params.id, { isActive: true });
-
-    res.json({
-      id: tank.product._id,
-      name: tank.product.name,
-      quantity: tank.product.quantity,
-      capacity: tank.product.capacity,
-      litersPerBottle: tank.litersPerBottle,
-      pricePerFill: tank.pricePerFill
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  if (!tank) {
+    return res.status(404).json({ error: 'Tanque no encontrado' })
   }
-});
+
+  res.json({
+    id: tank.product._id,
+    name: tank.product.name,
+    quantity: tank.product.quantity,
+    capacity: tank.product.capacity,
+    litersPerBottle: tank.litersPerBottle,
+    pricePerFill: tank.pricePerFill,
+    isActive: tank.active
+  })
+})
+
 
 
 

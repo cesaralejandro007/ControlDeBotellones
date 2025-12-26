@@ -14,36 +14,48 @@ router.get('/summary', auth, async (req, res) => {
   try{
     const days = Math.max(7, parseInt(req.query.days) || 30)
     // join Tank documents to get pricePerFill, litersPerBottle
-    const tanks = await Tank.find({ active: true }).populate('product')
+    const tanks = await Tank.find({ deleted: false }).populate('product')
     const since = new Date(); since.setDate(since.getDate() - days)
 
     const results = await Promise.all(tanks.map(async t => {
       const product = t.product
       // movimientos del tanque en periodo
-      const moves = await InventoryMovement.find({ product: product._id, createdAt: { $gte: since } }).sort({ createdAt: 1 })
-      // construir historial simple: tomar el quantity actual y aplicar movimientos hacia atrás para generar puntos diarios
-      // iniciamos con current quantity
-      let current = product.quantity || 0
-      const dayMs = 24*60*60*1000
-      const history = []
-      for (let d = days-1; d >= 0; d--) {
-        const dayStart = new Date(); dayStart.setHours(0,0,0,0); dayStart.setDate(dayStart.getDate() - d)
-        const dayEnd = new Date(dayStart.getTime() + dayMs)
-        // sum movements within day
-        const dayMoves = moves.filter(m => m.createdAt >= dayStart && m.createdAt < dayEnd)
-        // apply reverse to get quantity at end of previous day
-        const delta = dayMoves.reduce((s, m) => s + (m.type === 'in' ? m.quantity : -m.quantity), 0)
-        // quantity at start of day = current - sum of moves from this day onward
-        const qtyAtDayStart = current - delta
-        history.push({ date: dayStart.toISOString().slice(0,10), qty: qtyAtDayStart })
-        // set current for previous iteration
-        current = qtyAtDayStart
-      }
+// 🔵 SOLO movimientos de RECARGA del tanque
+const rechargeMoves = await InventoryMovement.find({
+  product: product._id,
+  type: 'in'
+}).sort({ createdAt: 1 })
+
+let runningQty = 0
+const history = []
+
+for (const m of rechargeMoves) {
+  runningQty += m.quantity
+
+  history.push({
+    date: m.createdAt.toISOString().slice(0, 10),
+    qty: runningQty,       // litros acumulados
+    litersAdded: m.quantity // litros de esa recarga
+  })
+}
+
 
       const pct = product.capacity ? Math.min(100, Math.round((product.quantity / product.capacity) * 100)) : 0
       const status = pct >= 70 ? 'ok' : (pct >= 30 ? 'medium' : 'low')
       const fillable = Math.floor(product.quantity / (t.litersPerBottle || 20))
-      return { id: t._id, name: product.name, productId: product._id, quantity: product.quantity, capacity: product.capacity, pct, status, history, pricePerFill: t.pricePerFill, litersPerBottle: t.litersPerBottle, fillable }
+      return {
+  id: t._id,
+  name: product.name,
+  productId: product._id,
+  quantity: product.quantity,
+  capacity: product.capacity,
+  status,
+  history, // 👈 ESTE history es el nuevo
+  pricePerFill: t.pricePerFill,
+  litersPerBottle: t.litersPerBottle,
+  isActive: t.active
+}
+
     }))
 
     res.json(results)
@@ -136,6 +148,32 @@ router.put('/:tankId/deactivate', auth, isAdmin, async (req, res) => {
   tank.active = false
   await tank.save()
   res.json({ message: 'Tanque desactivado correctamente' })
+})
+
+
+// ELIMINACIÓN LÓGICA (admin)
+router.delete('/:tankId', auth, isAdmin, async (req, res) => {
+  try {
+    const tank = await Tank.findById(req.params.tankId)
+
+    if (!tank) {
+      return res.status(404).json({ error: 'Tanque no encontrado' })
+    }
+
+    if (tank.active) {
+      return res.status(400).json({
+        error: 'No puedes eliminar un tanque activo. Activa otro primero.'
+      })
+    }
+
+    tank.deleted = true
+    tank.active = false // seguridad extra
+    await tank.save()
+
+    res.json({ ok: true, deleted: true })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
 })
 
 

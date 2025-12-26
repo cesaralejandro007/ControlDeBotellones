@@ -17,7 +17,8 @@ export default function Inventory(){
   const fetch = async ()=>{ try{ const res = await axios.get('http://localhost:4000/api/inventory'); setItems(res.data) }catch(e){ console.error(e) } }
 
   useEffect(()=>{
-    const low = (items || []).filter(i => i.unit === 'litro' && i.capacity && ((i.quantity/i.capacity)*100 < 30))
+    // Solo mostrar alerta de tanques bajos si hay productos tipo tanque
+    const low = (items || []).filter(i => i.type === 'tanque' && i.unit === 'litro' && i.capacity && ((i.quantity/i.capacity)*100 < 30))
     setLowTanks(low)
   }, [items])
 
@@ -197,92 +198,39 @@ const deleteProduct = async (p) => {
     </div>
   )}
 
-  {/* FORMULARIO */}
+  {/* FORMULARIO SOLO PARA PRODUCTOS NORMALES */}
   <div className="card shadow-sm border-0 mb-4">
     <div className="card-body">
       <h6 className="text-muted mb-3">Agregar / Actualizar producto</h6>
-
       <div className="row g-3">
         <div className="col-md-4">
           <label className="form-label small text-muted">Nombre</label>
-          <input
-            className="form-control form-control-sm"
-            placeholder="Nombre del producto"
-            value={form.name}
-            onChange={e => setForm({ ...form, name: e.target.value })}
-          />
+          <input className="form-control form-control-sm" placeholder="Nombre del producto" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
         </div>
-
         <div className="col-md-3">
           <label className="form-label small text-muted">Categoría</label>
-          <select
-            className="form-select form-select-sm"
-            value={form.category}
-            onChange={e => {
-              const cat = e.target.value;
-              if (cat === "Llenado Tanque")
-                setForm({ ...form, category: cat, unit: "litro", type: "tanque" });
-              else if (cat === "Botellones")
-                setForm({ ...form, category: cat, unit: "unidad", type: "botellon" });
-              else setForm({ ...form, category: cat });
-            }}
-          >
-            <option>Llenado Tanque</option>
+          <select className="form-select form-select-sm" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
             <option>Botellones</option>
             <option>Artículos de limpieza</option>
           </select>
         </div>
-
         <div className="col-md-2">
           <label className="form-label small text-muted">Unidad</label>
-          <select
-            className="form-select form-select-sm"
-            value={form.unit}
-            onChange={e => setForm({ ...form, unit: e.target.value })}
-          >
+          <select className="form-select form-select-sm" value={form.unit} onChange={e => setForm({ ...form, unit: e.target.value })}>
             <option value="unidad">Unidad</option>
             <option value="kg">Kg</option>
-            <option value="litro">Litro</option>
           </select>
         </div>
-
         <div className="col-md-3">
-          <label className="form-label small text-muted">
-            {form.unit === "litro" ? "Cantidad a llenar (litros)" : "Cantidad"}
-          </label>
-          <input
-            type="number"
-            className="form-control form-control-sm"
-            value={form.quantity}
-            onChange={e => setForm({ ...form, quantity: Number(e.target.value) })}
-          />
+          <label className="form-label small text-muted">Cantidad</label>
+          <input type="number" className="form-control form-control-sm" value={form.quantity} onChange={e => setForm({ ...form, quantity: Number(e.target.value) })} />
         </div>
-
         <div className="col-md-3">
-          <label className="form-label small text-muted">Precio por vacios (botellones)</label>
-          <input
-            type="number"
-            className="form-control form-control-sm"
-            placeholder="$0.00"
-            value={form.price}
-            onChange={e => setForm({ ...form, price: Number(e.target.value) })}
-          />
+          <label className="form-label small text-muted">Precio</label>
+          <input type="number" className="form-control form-control-sm" placeholder="$0.00" value={form.price} onChange={e => setForm({ ...form, price: Number(e.target.value) })} />
         </div>
-
-        <div className="col-md-3">
-          <label className="form-label small text-muted">Capacidad tanque (L)</label>
-          <input
-            type="number"
-            className="form-control form-control-sm"
-            value={form.capacity}
-            onChange={e => setForm({ ...form, capacity: Number(e.target.value) })}
-          />
-        </div>
-
         <div className="col-md-3 d-flex align-items-end">
-          <button className="btn btn-primary btn-sm w-100" onClick={submit}>
-            Guardar
-          </button>
+          <button className="btn btn-primary btn-sm w-100" onClick={submit}>Guardar</button>
         </div>
       </div>
     </div>
@@ -304,86 +252,19 @@ const deleteProduct = async (p) => {
             </tr>
           </thead>
           <tbody>
-            {items.map(i => {
-              const pct = i.capacity
-                ? Math.min(100, Math.round((i.quantity / i.capacity) * 100))
-                : null;
-
+            {items.filter(i => i.type !== 'tanque' && i.category !== 'Llenado Tanque').map(i => {
               return (
                 <tr key={i._id}>
-                  <td className="fw-medium">
-                    {i.name} {i.isActive && i.type === 'tanque' && (
-                      <span className="badge bg-info ms-2">Activo</span>
-                    )}
-                  </td>
-                  <td>
-                    <span className="badge bg-secondary">
-                      {i.category || i.type}
-                    </span>
-                  </td>
-                  <td>
-                    {i.quantity} {i.unit}
-                  </td>
-                  <td>
-                    {pct !== null ? (
-                      <span
-                        className={`badge ${
-                          pct >= 70
-                            ? "bg-success"
-                            : pct >= 30
-                            ? "bg-warning text-dark"
-                            : "bg-danger"
-                        }`}
-                      >
-                        {pct}%
-                      </span>
-                    ) : (
-                      <small className="text-muted">N/A</small>
-                    )}
-                  </td>
+                  <td className="fw-medium">{i.name}</td>
+                  <td><span className="badge bg-secondary">{i.category || i.type}</span></td>
+                  <td>{i.quantity} {i.unit}</td>
+                  <td><small className="text-muted">N/A</small></td>
                   <td className="text-end">${i.price}</td>
-<td className="text-end">
-
-  {/* VENTAS */}
-  <button
-    className="btn btn-sm btn-outline-success me-2"
-    onClick={() => sellProduct(i)}
-  >
-    <FaCashRegister />
-  </button>
-
-  {/* EDITAR */}
-  <button
-    className="btn btn-sm btn-outline-primary me-2"
-    onClick={() => editProduct(i)}
-  >
-    <FaEdit />
-  </button>
-
-  {/* ACTIVAR TANQUE */}
-  {i.type === 'tanque' && !i.isActive && (
-    <button
-      className="btn btn-sm btn-outline-info me-2"
-      onClick={async () => {
-        await axios.put(`http://localhost:4000/api/inventory/tanks/activate/${i._id}`)
-        Swal.fire('Activado', 'Tanque activado correctamente', 'success')
-        fetch()
-      }}
-    >
-      Activar
-    </button>
-  )}
-
-  {/* ELIMINAR / DESACTIVAR */}
-  <button
-    className="btn btn-sm btn-outline-danger"
-    onClick={() => deleteProduct(i)}
-  >
-    <FaTrash />
-  </button>
-
-</td>
-
+                  <td className="text-end">
+                    <button className="btn btn-sm btn-outline-success me-2" onClick={() => sellProduct(i)}><FaCashRegister /></button>
+                    <button className="btn btn-sm btn-outline-primary me-2" onClick={() => editProduct(i)}><FaEdit /></button>
+                    <button className="btn btn-sm btn-outline-danger" onClick={() => deleteProduct(i)}><FaTrash /></button>
+                  </td>
                 </tr>
               );
             })}
